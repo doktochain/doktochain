@@ -1,5 +1,5 @@
 import { api } from '../lib/api-client';
-import { supabase } from '../lib/supabase';
+import { storageClient } from '../lib/storage-client';
 import { auditTrailService } from './auditTrailService';
 import { consentService } from './consentService';
 import { notificationService } from './notificationService';
@@ -471,21 +471,13 @@ export const enhancedBookingService = {
     userId: string
   ): Promise<void> {
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${appointmentId}/${Date.now()}.${fileExt}`;
-      const filePath = `appointment-documents/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('medical-documents')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
+      const { key } = await storageClient.uploadFile('medical-records', file);
 
       const { error: dbError } = await api.post('/appointment-documents', {
         appointment_id: appointmentId,
         document_type: documentType,
         file_name: file.name,
-        file_path: filePath,
+        file_path: key,
         file_size: file.size,
         mime_type: file.type,
         uploaded_by: userId,

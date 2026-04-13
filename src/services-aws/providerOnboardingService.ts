@@ -1,5 +1,5 @@
 import { api } from '../lib/api-client';
-import { supabase } from '../lib/supabase';
+import { storageClient } from '../lib/storage-client';
 import { blockchainAuditService } from './blockchainAuditService';
 
 export interface ProviderOnboardingApplication {
@@ -151,24 +151,13 @@ export const providerOnboardingService = {
   },
 
   async uploadDocument(applicationId: string, file: File, documentType: string): Promise<VerificationDocument> {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${applicationId}/${documentType}_${Date.now()}.${fileExt}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('provider-documents')
-      .upload(fileName, file);
-
-    if (uploadError) throw uploadError;
-
-    const { data: urlData } = supabase.storage
-      .from('provider-documents')
-      .getPublicUrl(fileName);
+    const { publicUrl } = await storageClient.uploadFile('identity-documents', file);
 
     const { data: document, error: docError } = await api.post<VerificationDocument>('/provider-verification-documents', {
       application_id: applicationId,
       document_type: documentType,
       document_name: file.name,
-      file_url: urlData.publicUrl,
+      file_url: publicUrl,
       file_size: file.size,
       mime_type: file.type,
       verification_status: 'pending'

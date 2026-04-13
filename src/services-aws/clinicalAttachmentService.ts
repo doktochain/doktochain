@@ -1,5 +1,5 @@
 import { api } from '../lib/api-client';
-import { supabase } from '../lib/supabase';
+import { storageClient } from '../lib/storage-client';
 import { validateFileUpload } from '../lib/security';
 
 export interface ClinicalAttachment {
@@ -33,22 +33,7 @@ export const clinicalAttachmentService = {
     const validation = validateFileUpload(file, 'medical');
     if (!validation.valid) throw new Error(validation.error);
 
-    const fileExt = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
-    const fileName = `clinical-notes/${clinicalNoteId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('medical-records')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false,
-        contentType: file.type,
-      });
-
-    if (uploadError) throw uploadError;
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('medical-records')
-      .getPublicUrl(fileName);
+    const { publicUrl } = await storageClient.uploadFile('medical-records', file);
 
     const { data, error } = await api.post<ClinicalAttachment>('/clinical-note-attachments', {
       clinical_note_id: clinicalNoteId,
@@ -70,7 +55,7 @@ export const clinicalAttachmentService = {
     if (attachment?.file_url) {
       const urlParts = attachment.file_url.split('/medical-records/');
       if (urlParts[1]) {
-        await supabase.storage.from('medical-records').remove([urlParts[1]]);
+        await storageClient.deleteFile(`medical-records/${urlParts[1]}`);
       }
     }
 

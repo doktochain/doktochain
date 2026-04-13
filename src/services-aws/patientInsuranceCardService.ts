@@ -1,5 +1,5 @@
 import { api } from '../lib/api-client';
-import { supabase } from '../lib/supabase';
+import { storageClient } from '../lib/storage-client';
 
 export interface PatientInsuranceCard {
   id: string;
@@ -114,45 +114,18 @@ class PatientInsuranceCardService {
 
   async uploadCardImage(
     file: File,
-    userId: string,
-    side: 'front' | 'back'
+    _userId: string,
+    _side: 'front' | 'back'
   ): Promise<string> {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${userId}/${Date.now()}_${side}.${fileExt}`;
-
-    const { data, error } = await supabase.storage
-      .from('insurance-cards')
-      .upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
-
-    if (error) {
-      console.error('Error uploading card image:', error);
-      throw error;
-    }
-
-    const { data: urlData } = supabase.storage
-      .from('insurance-cards')
-      .getPublicUrl(fileName);
-
-    return urlData.publicUrl;
+    const { publicUrl } = await storageClient.uploadFile('insurance-cards', file);
+    return publicUrl;
   }
 
   async deleteCardImage(url: string): Promise<void> {
     const urlParts = url.split('/insurance-cards/');
     if (urlParts.length < 2) return;
 
-    const filePath = urlParts[1];
-
-    const { error } = await supabase.storage
-      .from('insurance-cards')
-      .remove([filePath]);
-
-    if (error) {
-      console.error('Error deleting card image:', error);
-      throw error;
-    }
+    await storageClient.deleteFile(`insurance-cards/${urlParts[1]}`);
   }
 
   async getAcceptedInsuranceForProvider(providerId: string): Promise<string[]> {

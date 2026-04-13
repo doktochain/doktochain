@@ -1,5 +1,5 @@
 import { api } from '../lib/api-client';
-import { supabase } from '../lib/supabase';
+import { storageClient } from '../lib/storage-client';
 
 export interface ProviderProfileData {
   bio?: string;
@@ -105,33 +105,13 @@ export const providerProfileService = {
   },
 
   async uploadPhoto(file: File): Promise<string> {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random()}.${fileExt}`;
-    const filePath = `provider-photos/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('user-uploads')
-      .upload(filePath, file, { upsert: true });
-
-    if (uploadError) throw uploadError;
-
-    const { data } = supabase.storage.from('user-uploads').getPublicUrl(filePath);
-    return data.publicUrl;
+    const { publicUrl } = await storageClient.uploadFile('profile-photos', file);
+    return publicUrl;
   },
 
   async uploadVideo(file: File): Promise<string> {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random()}.${fileExt}`;
-    const filePath = `provider-videos/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('user-uploads')
-      .upload(filePath, file, { upsert: true });
-
-    if (uploadError) throw uploadError;
-
-    const { data } = supabase.storage.from('user-uploads').getPublicUrl(filePath);
-    return data.publicUrl;
+    const { publicUrl } = await storageClient.uploadFile('profile-photos', file);
+    return publicUrl;
   },
 
   async getAllSpecialties() {
@@ -424,17 +404,7 @@ export const providerProfileService = {
   },
 
   async uploadCredentialDocument(file: File): Promise<string> {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-    const filePath = `provider-credentials/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('user-uploads')
-      .upload(filePath, file, { upsert: true });
-
-    if (uploadError) throw uploadError;
-
-    const { data } = supabase.storage.from('user-uploads').getPublicUrl(filePath);
-    return data.publicUrl;
+    const { publicUrl } = await storageClient.uploadFile('identity-documents', file);
+    return publicUrl;
   },
 };

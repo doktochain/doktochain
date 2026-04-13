@@ -1,5 +1,5 @@
 import { api } from '../lib/api-client';
-import { supabase } from '../lib/supabase';
+import { storageClient } from '../lib/storage-client';
 
 export interface TelemedicineSession {
   id: string;
@@ -224,13 +224,7 @@ export const advancedTelemedicineService = {
     uploadedBy: string,
     file: File
   ): Promise<SessionFile> {
-    const filePath = `sessions/${sessionId}/${Date.now()}_${file.name}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('session-files')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
+    const { key } = await storageClient.uploadFile('medical-records', file);
 
     const { data, error } = await api.post<SessionFile>('/session-files', {
       session_id: sessionId,
@@ -238,7 +232,7 @@ export const advancedTelemedicineService = {
       file_name: file.name,
       file_type: file.type,
       file_size_mb: file.size / (1024 * 1024),
-      storage_path: filePath,
+      storage_path: key,
       virus_scan_status: 'pending',
     });
 
@@ -262,12 +256,7 @@ export const advancedTelemedicineService = {
 
     await api.post(`/rpc/increment-download-count`, { file_id: fileId });
 
-    const { data, error } = await supabase.storage
-      .from('session-files')
-      .download(fileData!.storage_path);
-
-    if (error) throw error;
-    return data;
+    return storageClient.downloadFile(fileData!.storage_path);
   },
 
   async generateAISoapNote(sessionId: string, appointmentId: string, transcriptText: string): Promise<AISoapNote> {
