@@ -43,7 +43,7 @@ export default function LoginFormFields({
   const [roleMismatch, setRoleMismatch] = useState<{ role: string; link: { label: string; path: string } } | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const { signIn, userProfile } = useAuth();
+  const { signIn, signOut, userProfile } = useAuth();
   const navigate = useNavigate();
   const { t } = useTranslation('auth');
 
@@ -59,23 +59,34 @@ export default function LoginFormFields({
     try {
       await signIn(email, password);
 
-      const { data: profileData } = await (await import('../../lib/supabase')).supabase
-        .from('user_profiles')
-        .select('role')
-        .eq('email', email)
-        .maybeSingle();
+      let userRole: string | undefined;
 
-      const userRole = profileData?.role || userProfile?.role;
+      if (import.meta.env.VITE_API_URL) {
+        // AWS: fetch role from /auth/me
+        const { api } = await import('../../lib/api-client');
+        const { data: profileData } = await api.get<{ role: string }>('/auth/me');
+        userRole = profileData?.role;
+      } else {
+        // Supabase: fetch role directly
+        const { supabase } = await import('../../lib/supabase');
+        const { data: profileData } = await supabase
+          .from('user_profiles')
+          .select('role')
+          .eq('email', email)
+          .maybeSingle();
+        userRole = profileData?.role;
+      }
+
+      userRole = userRole || userProfile?.role;
 
       if (userRole && !allowedRoles.includes(userRole)) {
         const mismatchLink = roleMismatchLinks[userRole];
         if (mismatchLink) {
           setRoleMismatch({ role: userRole, link: mismatchLink });
-          await (await import('../../lib/supabase')).supabase.auth.signOut();
         } else {
           setError(t('login.noAccessError'));
-          await (await import('../../lib/supabase')).supabase.auth.signOut();
         }
+        await signOut();
         setLoading(false);
         return;
       }
