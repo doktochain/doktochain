@@ -1,0 +1,13 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+    commands:
+      - npm install -g aws-cdk
+      - cd infrastructure && npm ci
+
+  build:
+    commands:
+      - cd infrastructure && cdk deploy --all --require-approval never --context env=$DEPLOY_ENV

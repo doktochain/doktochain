@@ -1,0 +1,52 @@
+{
+  "dashboard": {
+    "title": "Tableau de bord de la pharmacie",
+    "pendingOrders": "Commandes en attente",
+    "todayOrders": "Commandes du jour",
+    "lowStockAlerts": "Alertes de stock faible",
+    "revenue": "Revenus"
+  },
+  "orders": {
+    "title": "Commandes",
+    "all": "Toutes les commandes",
+    "pending": "En attente",
+    "processing": "En traitement",
+    "completed": "Terminées",
+    "history": "Historique des commandes",
+    "details": "Détails de la commande",
+    "fulfill": "Exécuter la commande",
+    "tracking": "Suivi de commande"
+  },
+  "prescriptions": {
+    "title": "Ordonnances",
+    "all": "Toutes les ordonnances",
+    "pendingVerification": "Vérification en attente",
+    "refillRequests": "Demandes de renouvellement",
+    "verify": "Vérifier l'ordonnance",
+    "dispense": "Distribuer"
+  },
+  "inventory": {
+    "title": "Inventaire",
+    "allProducts": "Tous les produits",
+    "lowStock": "Stock faible",
+    "addProduct": "Ajouter un produit",
+    "editProduct": "Modifier le produit",
+    "stockLevel": "Niveau de stock",
+    "reorderPoint": "Point de réapprovisionnement",
+    "category": "Catégorie",
+    "sku": "UGS"
+  },
+  "customers": {
+    "title": "Clients",
+    "all": "Tous les clients",
+    "recent": "Clients récents",
+    "details": "Détails du client"
+  },
+  "profile": {
+    "title": "Profil de la pharmacie",
+    "businessHours": "Heures d'ouverture",
+    "staff": "Gestion du personnel",
+    "license": "Informations de licence",
+    "services": "Services offerts"
+  }
+}

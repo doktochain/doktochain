@@ -1,0 +1,108 @@
+{
+  "dashboard": {
+    "title": "Provider Dashboard",
+    "welcome": "Welcome, Dr. {{name}}",
+    "todayAppointments": "Today's Appointments",
+    "pendingActions": "Pending Actions",
+    "patientCount": "Total Patients",
+    "revenue": "Revenue",
+    "recentActivity": "Recent Activity"
+  },
+  "appointments": {
+    "title": "Appointments",
+    "calendar": "Calendar View",
+    "queue": "Patient Queue",
+    "history": "History",
+    "details": "Appointment Details",
+    "startConsultation": "Start Consultation",
+    "markComplete": "Mark Complete",
+    "noShow": "No Show",
+    "nextPatient": "Next Patient"
+  },
+  "schedule": {
+    "title": "My Schedule",
+    "availability": "Availability",
+    "workingHours": "Working Hours",
+    "breaks": "Breaks",
+    "timeOff": "Time Off",
+    "setAvailability": "Set Availability"
+  },
+  "clinical": {
+    "title": "Clinical",
+    "documentation": "Clinical Documentation",
+    "notes": "Clinical Notes",
+    "patientCharts": "Patient Charts",
+    "templates": "Templates",
+    "soapNotes": "SOAP Notes",
+    "vitalSigns": "Vital Signs"
+  },
+  "prescriptions": {
+    "title": "Prescriptions",
+    "write": "Write Prescription",
+    "all": "All Prescriptions",
+    "refillRequests": "Refill Requests",
+    "medication": "Medication",
+    "dosage": "Dosage",
+    "instructions": "Instructions",
+    "sendToPharmacy": "Send to Pharmacy"
+  },
+  "telemedicine": {
+    "title": "Telemedicine",
+    "startSession": "Start Session",
+    "waitingRoom": "Waiting Room",
+    "sessionHistory": "Session History",
+    "patientsWaiting": "Patients Waiting"
+  },
+  "billing": {
+    "title": "Billing",
+    "earnings": "Earnings",
+    "transactions": "Transactions",
+    "claims": "Insurance Claims",
+    "gatewaySetup": "Payment Gateway Setup",
+    "totalEarnings": "Total Earnings",
+    "pendingPayments": "Pending Payments"
+  },
+  "messaging": {
+    "title": "Messages",
+    "inbox": "Inbox",
+    "templates": "Message Templates",
+    "automated": "Automated Messages",
+    "staffChat": "Staff Chat"
+  },
+  "profile": {
+    "title": "Profile & Settings",
+    "myProfile": "My Profile",
+    "locations": "Clinic Locations",
+    "credentials": "Credentials",
+    "staff": "Staff Management",
+    "specialties": "Specialties",
+    "education": "Education & Training"
+  },
+  "notifications": {
+    "title": "Notifications & Preferences",
+    "emailNotifications": "Email Notifications",
+    "smsNotifications": "SMS Notifications",
+    "appointmentReminders": "Appointment Reminders"
+  },
+  "referrals": {
+    "title": "Referral Management",
+    "sent": "Sent Referrals",
+    "received": "Received Referrals",
+    "create": "Create Referral",
+    "noReferrals": "No referrals found",
+    "status": "Status",
+    "urgency": "Urgency",
+    "patient": "Patient",
+    "reason": "Reason"
+  },
+  "affiliations": {
+    "title": "Clinic Affiliations",
+    "active": "Active",
+    "pending": "Pending",
+    "request": "Request Affiliation",
+    "noAffiliations": "No affiliations found",
+    "role": "Role",
+    "clinic": "Clinic",
+    "since": "Since"
+  }
+}

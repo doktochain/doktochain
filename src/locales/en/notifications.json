@@ -1,0 +1,36 @@
+{
+  "types": {
+    "appointmentConfirmed": "Appointment confirmed",
+    "appointmentCancelled": "Appointment cancelled",
+    "appointmentReminder": "Appointment reminder",
+    "appointmentRescheduled": "Appointment rescheduled",
+    "prescriptionReady": "Prescription ready",
+    "prescriptionRefillApproved": "Refill request approved",
+    "prescriptionRefillDenied": "Refill request denied",
+    "newMessage": "New message",
+    "paymentReceived": "Payment received",
+    "paymentFailed": "Payment failed",
+    "labResultsReady": "Lab results ready",
+    "providerApproved": "Provider application approved",
+    "providerRejected": "Provider application rejected",
+    "pharmacyApproved": "Pharmacy application approved",
+    "newPatient": "New patient registered",
+    "orderShipped": "Order shipped",
+    "orderDelivered": "Order delivered",
+    "consentRequested": "Consent requested",
+    "consentGranted": "Consent granted",
+    "consentRevoked": "Consent revoked",
+    "systemAlert": "System alert",
+    "accountUpdate": "Account updated"
+  },
+  "ui": {
+    "title": "Notifications",
+    "markAllRead": "Mark all as read",
+    "clearAll": "Clear all",
+    "noNotifications": "No notifications",
+    "viewAll": "View all notifications",
+    "new": "New",
+    "earlier": "Earlier",
+    "settings": "Notification Settings"
+  }
+}

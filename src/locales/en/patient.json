@@ -1,0 +1,108 @@
+{
+  "dashboard": {
+    "title": "Patient Dashboard",
+    "welcome": "Welcome back, {{name}}",
+    "upcomingAppointments": "Upcoming Appointments",
+    "recentPrescriptions": "Recent Prescriptions",
+    "healthSummary": "Health Summary",
+    "quickActions": "Quick Actions",
+    "noUpcoming": "No upcoming appointments",
+    "bookNow": "Book an appointment now"
+  },
+  "appointments": {
+    "title": "My Appointments",
+    "book": "Book Appointment",
+    "upcoming": "Upcoming",
+    "past": "Past",
+    "cancelled": "Cancelled",
+    "noAppointments": "No appointments found",
+    "details": "Appointment Details",
+    "cancel": "Cancel Appointment",
+    "reschedule": "Reschedule",
+    "joinVideo": "Join Video Call",
+    "with": "with",
+    "on": "on",
+    "at": "at",
+    "reason": "Reason for Visit",
+    "confirmCancel": "Are you sure you want to cancel this appointment?"
+  },
+  "prescriptions": {
+    "title": "My Prescriptions",
+    "active": "Active",
+    "expired": "Expired",
+    "medication": "Medication",
+    "dosage": "Dosage",
+    "frequency": "Frequency",
+    "prescribedBy": "Prescribed by",
+    "refillRequest": "Request Refill",
+    "sendToPharmacy": "Send to Pharmacy",
+    "noPrescriptions": "No prescriptions found"
+  },
+  "healthRecords": {
+    "title": "Health Records",
+    "allergies": "Allergies",
+    "medications": "Medications",
+    "immunizations": "Immunizations",
+    "labResults": "Lab Results",
+    "clinicalNotes": "Clinical Notes",
+    "timeline": "Health Timeline",
+    "export": "Export Records",
+    "share": "Share Records"
+  },
+  "pharmacy": {
+    "title": "Pharmacy",
+    "findPharmacy": "Find a Pharmacy",
+    "myPharmacy": "My Pharmacy",
+    "orders": "My Orders",
+    "refills": "Refill Requests",
+    "marketplace": "Pharmacy Marketplace"
+  },
+  "billing": {
+    "title": "Billing & Insurance",
+    "invoices": "Invoices",
+    "payments": "Payments",
+    "insurance": "Insurance",
+    "balance": "Balance"
+  },
+  "family": {
+    "title": "Family Members",
+    "addMember": "Add Family Member",
+    "relationship": "Relationship",
+    "manage": "Manage"
+  },
+  "settings": {
+    "title": "Settings",
+    "account": "Account Settings",
+    "notifications": "Notification Preferences",
+    "privacy": "Privacy & Consent",
+    "language": "Language",
+    "theme": "Theme"
+  },
+  "profile": {
+    "title": "My Profile",
+    "personalInfo": "Personal Information",
+    "healthInfo": "Health Information",
+    "emergencyContacts": "Emergency Contacts",
+    "insuranceInfo": "Insurance Information",
+    "editProfile": "Edit Profile"
+  },
+  "videoConsultation": {
+    "title": "Video Consultation",
+    "joining": "Joining consultation...",
+    "waitingRoom": "Waiting Room",
+    "connected": "Connected"
+  },
+  "medications": {
+    "title": "Medications",
+    "current": "Current Medications",
+    "past": "Past Medications",
+    "reminders": "Medication Reminders"
+  },
+  "messages": {
+    "title": "Messages",
+    "compose": "New Message",
+    "inbox": "Inbox",
+    "sent": "Sent",
+    "noMessages": "No messages"
+  }
+}

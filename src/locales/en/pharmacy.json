@@ -1,0 +1,52 @@
+{
+  "dashboard": {
+    "title": "Pharmacy Dashboard",
+    "pendingOrders": "Pending Orders",
+    "todayOrders": "Today's Orders",
+    "lowStockAlerts": "Low Stock Alerts",
+    "revenue": "Revenue"
+  },
+  "orders": {
+    "title": "Orders",
+    "all": "All Orders",
+    "pending": "Pending",
+    "processing": "Processing",
+    "completed": "Completed",
+    "history": "Order History",
+    "details": "Order Details",
+    "fulfill": "Fulfill Order",
+    "tracking": "Order Tracking"
+  },
+  "prescriptions": {
+    "title": "Prescriptions",
+    "all": "All Prescriptions",
+    "pendingVerification": "Pending Verification",
+    "refillRequests": "Refill Requests",
+    "verify": "Verify Prescription",
+    "dispense": "Dispense"
+  },
+  "inventory": {
+    "title": "Inventory",
+    "allProducts": "All Products",
+    "lowStock": "Low Stock",
+    "addProduct": "Add Product",
+    "editProduct": "Edit Product",
+    "stockLevel": "Stock Level",
+    "reorderPoint": "Reorder Point",
+    "category": "Category",
+    "sku": "SKU"
+  },
+  "customers": {
+    "title": "Customers",
+    "all": "All Customers",
+    "recent": "Recent Customers",
+    "details": "Customer Details"
+  },
+  "profile": {
+    "title": "Pharmacy Profile",
+    "businessHours": "Business Hours",
+    "staff": "Staff Management",
+    "license": "License Information",
+    "services": "Services Offered"
+  }
+}

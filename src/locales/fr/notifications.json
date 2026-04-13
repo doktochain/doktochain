@@ -1,0 +1,36 @@
+{
+  "types": {
+    "appointmentConfirmed": "Rendez-vous confirmé",
+    "appointmentCancelled": "Rendez-vous annulé",
+    "appointmentReminder": "Rappel de rendez-vous",
+    "appointmentRescheduled": "Rendez-vous replanifié",
+    "prescriptionReady": "Ordonnance prête",
+    "prescriptionRefillApproved": "Demande de renouvellement approuvée",
+    "prescriptionRefillDenied": "Demande de renouvellement refusée",
+    "newMessage": "Nouveau message",
+    "paymentReceived": "Paiement reçu",
+    "paymentFailed": "Paiement échoué",
+    "labResultsReady": "Résultats de laboratoire prêts",
+    "providerApproved": "Demande de professionnel approuvée",
+    "providerRejected": "Demande de professionnel rejetée",
+    "pharmacyApproved": "Demande de pharmacie approuvée",
+    "newPatient": "Nouveau patient inscrit",
+    "orderShipped": "Commande expédiée",
+    "orderDelivered": "Commande livrée",
+    "consentRequested": "Consentement demandé",
+    "consentGranted": "Consentement accordé",
+    "consentRevoked": "Consentement révoqué",
+    "systemAlert": "Alerte système",
+    "accountUpdate": "Compte mis à jour"
+  },
+  "ui": {
+    "title": "Notifications",
+    "markAllRead": "Tout marquer comme lu",
+    "clearAll": "Tout effacer",
+    "noNotifications": "Aucune notification",
+    "viewAll": "Voir toutes les notifications",
+    "new": "Nouvelles",
+    "earlier": "Plus anciennes",
+    "settings": "Paramètres de notification"
+  }
+}

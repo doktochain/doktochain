@@ -1,0 +1,67 @@
+{
+  "dashboard": {
+    "title": "Clinic Dashboard",
+    "todayAppointments": "Today's Appointments",
+    "totalProviders": "Total Providers",
+    "totalPatients": "Total Patients",
+    "revenue": "Revenue"
+  },
+  "profile": {
+    "title": "Clinic Profile",
+    "name": "Clinic Name",
+    "address": "Address",
+    "phone": "Phone",
+    "email": "Email",
+    "hours": "Operating Hours",
+    "description": "Description"
+  },
+  "providers": {
+    "title": "Providers",
+    "all": "All Providers",
+    "invite": "Invite Provider",
+    "manage": "Manage Providers"
+  },
+  "appointments": {
+    "title": "Appointments",
+    "all": "All Appointments",
+    "availability": "Set Availability",
+    "calendar": "Calendar"
+  },
+  "services": {
+    "title": "Services",
+    "all": "All Services",
+    "add": "Add Service",
+    "manage": "Manage Services"
+  },
+  "specializations": {
+    "title": "Specializations",
+    "all": "All Specializations",
+    "manage": "Manage Specializations"
+  },
+  "patients": {
+    "title": "Patients",
+    "all": "Patient List",
+    "details": "Patient Details"
+  },
+  "staff": {
+    "title": "Staff",
+    "all": "All Staff",
+    "manage": "Manage Staff"
+  },
+  "schedule": {
+    "title": "Schedule",
+    "manage": "Manage Schedule"
+  },
+  "affiliations": {
+    "title": "Affiliations",
+    "manage": "Manage Affiliations"
+  },
+  "billing": {
+    "title": "Billing",
+    "overview": "Billing Overview"
+  },
+  "settings": {
+    "title": "Settings",
+    "general": "General Settings"
+  }
+}

@@ -1,0 +1,108 @@
+{
+  "dashboard": {
+    "title": "Tableau de bord patient",
+    "welcome": "Bienvenue, {{name}}",
+    "upcomingAppointments": "Rendez-vous à venir",
+    "recentPrescriptions": "Ordonnances récentes",
+    "healthSummary": "Résumé de santé",
+    "quickActions": "Actions rapides",
+    "noUpcoming": "Aucun rendez-vous à venir",
+    "bookNow": "Prendre un rendez-vous maintenant"
+  },
+  "appointments": {
+    "title": "Mes rendez-vous",
+    "book": "Prendre rendez-vous",
+    "upcoming": "À venir",
+    "past": "Passés",
+    "cancelled": "Annulés",
+    "noAppointments": "Aucun rendez-vous trouvé",
+    "details": "Détails du rendez-vous",
+    "cancel": "Annuler le rendez-vous",
+    "reschedule": "Replanifier",
+    "joinVideo": "Rejoindre l'appel vidéo",
+    "with": "avec",
+    "on": "le",
+    "at": "à",
+    "reason": "Motif de la visite",
+    "confirmCancel": "Êtes-vous sûr de vouloir annuler ce rendez-vous?"
+  },
+  "prescriptions": {
+    "title": "Mes ordonnances",
+    "active": "Actives",
+    "expired": "Expirées",
+    "medication": "Médicament",
+    "dosage": "Posologie",
+    "frequency": "Fréquence",
+    "prescribedBy": "Prescrit par",
+    "refillRequest": "Demander un renouvellement",
+    "sendToPharmacy": "Envoyer à la pharmacie",
+    "noPrescriptions": "Aucune ordonnance trouvée"
+  },
+  "healthRecords": {
+    "title": "Dossiers de santé",
+    "allergies": "Allergies",
+    "medications": "Médicaments",
+    "immunizations": "Immunisations",
+    "labResults": "Résultats de laboratoire",
+    "clinicalNotes": "Notes cliniques",
+    "timeline": "Chronologie de santé",
+    "export": "Exporter les dossiers",
+    "share": "Partager les dossiers"
+  },
+  "pharmacy": {
+    "title": "Pharmacie",
+    "findPharmacy": "Trouver une pharmacie",
+    "myPharmacy": "Ma pharmacie",
+    "orders": "Mes commandes",
+    "refills": "Demandes de renouvellement",
+    "marketplace": "Marché de pharmacies"
+  },
+  "billing": {
+    "title": "Facturation et assurance",
+    "invoices": "Factures",
+    "payments": "Paiements",
+    "insurance": "Assurance",
+    "balance": "Solde"
+  },
+  "family": {
+    "title": "Membres de la famille",
+    "addMember": "Ajouter un membre",
+    "relationship": "Lien de parenté",
+    "manage": "Gérer"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "account": "Paramètres du compte",
+    "notifications": "Préférences de notification",
+    "privacy": "Confidentialité et consentement",
+    "language": "Langue",
+    "theme": "Thème"
+  },
+  "profile": {
+    "title": "Mon profil",
+    "personalInfo": "Informations personnelles",
+    "healthInfo": "Informations de santé",
+    "emergencyContacts": "Contacts d'urgence",
+    "insuranceInfo": "Informations d'assurance",
+    "editProfile": "Modifier le profil"
+  },
+  "videoConsultation": {
+    "title": "Consultation vidéo",
+    "joining": "Connexion à la consultation...",
+    "waitingRoom": "Salle d'attente",
+    "connected": "Connecté"
+  },
+  "medications": {
+    "title": "Médicaments",
+    "current": "Médicaments actuels",
+    "past": "Médicaments antérieurs",
+    "reminders": "Rappels de médicaments"
+  },
+  "messages": {
+    "title": "Messages",
+    "compose": "Nouveau message",
+    "inbox": "Boîte de réception",
+    "sent": "Envoyés",
+    "noMessages": "Aucun message"
+  }
+}

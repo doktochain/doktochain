@@ -1,0 +1,1065 @@
+{
+  "privacyPolicy": "Privacy Policy",
+  "termsOfService": "Terms of Service",
+  "cookiePolicy": "Cookie Policy",
+  "hipaaCompliance": "HIPAA Compliance",
+  "securityWhitepaper": "Security Whitepaper",
+  "refundPolicy": "Refund Policy",
+  "accessibility": "Accessibility",
+  "lastUpdated": "Last updated: {{date}}",
+  "tableOfContents": "Table of Contents",
+  "backToTop": "Back to Top",
+  "home": "Home",
+  "sidebarLabel": "Legal",
+  "sidebar": {
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service",
+    "cookies": "Cookie Policy",
+    "hipaa": "HIPAA Compliance",
+    "security": "Security Whitepaper",
+    "accessibility": "Accessibility",
+    "refund": "Refund Policy"
+  },
+  "security": {
+    "executiveSummary": {
+      "title": "Executive Summary",
+      "content": "Doktochain operates at the forefront of healthcare data security, implementing cryptographic audit trails, database-enforced consent mechanisms, and industry-leading encryption standards. This whitepaper details our technical architecture designed to meet and exceed Canadian healthcare regulatory requirements while providing verifiable proof of data integrity and access control."
+    },
+    "section1": {
+      "title": "1. Cryptographic Audit Trails",
+      "intro": "Every significant action on the Doktochain platform is recorded in an immutable, tamper-evident audit trail powered by cryptographic hashing. This ensures that no data access or modification can occur without permanent, verifiable evidence.",
+      "hashChain": {
+        "title": "1.1 SHA-256 Hash-Chain Architecture",
+        "intro": "Our audit system maintains a hash-chain where each new entry incorporates the cryptographic hash of the previous entry. This creates a mathematically linked sequence where altering any historical record would invalidate all subsequent entries, making tampering immediately detectable.",
+        "hashFunction": "<strong>Hash Function:</strong> SHA-256 (256-bit cryptographic hash)",
+        "chainFormat": "<strong>Chain Format:</strong> Each audit entry includes: action type, user ID, resource ID, timestamp (UTC), access reason, and previous entry hash",
+        "immutability": "<strong>Immutability:</strong> Once written, audit records are append-only; no modification or deletion is permitted",
+        "verification": "<strong>Verification:</strong> Any third party can verify the integrity of the entire chain by recalculating hashes"
+      },
+      "coverage": {
+        "title": "1.2 Audit Trail Coverage",
+        "intro": "The following actions are permanently recorded in the audit trail:",
+        "items": [
+          "All user authentication events (login, logout, password changes)",
+          "Patient health record access (who viewed what, when, and why)",
+          "Clinical data modifications (prescriptions written, diagnoses recorded, notes updated)",
+          "Consent grants and revocations (with time-based validity windows)",
+          "Cross-tenant data access (provider to patient, pharmacy to prescription)",
+          "Export and sharing events (PDF downloads, record transfers, FHIR exports)",
+          "Administrative actions (user creation, role assignments, policy changes)"
+        ]
+      },
+      "patientAccess": {
+        "title": "1.3 Patient Audit Access",
+        "content": "Patients maintain continuous, real-time visibility into their audit trail. The platform provides a timestamped log showing exactly who accessed their records, when access occurred, and the reason for access (under which consent grant). This transparency builds trust and provides legal accountability."
+      }
+    },
+    "section2": {
+      "title": "2. Bank-Level Encryption",
+      "intro": "Doktochain employs encryption standards matching those of financial institutions, protecting data both in transit and at rest. This multi-layered approach ensures that even in the unlikely event of a database compromise, personal health information remains unreadable without proper decryption keys.",
+      "inTransit": {
+        "title": "2.1 Encryption in Transit",
+        "protocol": "<strong>Protocol:</strong> TLS 1.3 (minimum) for all network communication",
+        "certificate": "<strong>Certificate:</strong> Valid, CA-signed certificates on all endpoints",
+        "cipherSuites": "<strong>Cipher Suites:</strong> Only modern, cryptographically secure cipher suites (no legacy algorithms)",
+        "forwardSecrecy": "<strong>Perfect Forward Secrecy:</strong> Session keys are ephemeral; even if long-term keys are compromised, past sessions remain secure",
+        "hsts": "<strong>HSTS:</strong> HTTP Strict Transport Security enforced to prevent downgrade attacks"
+      },
+      "atRest": {
+        "title": "2.2 Encryption at Rest",
+        "algorithm": "<strong>Algorithm:</strong> AES-256 (256-bit Advanced Encryption Standard)",
+        "mode": "<strong>Mode:</strong> GCM (Galois/Counter Mode) for authenticated encryption",
+        "keyManagement": "<strong>Key Management:</strong> Keys are stored separately from encrypted data, protected by hardware security modules (HSM) where applicable",
+        "database": "<strong>Database Encryption:</strong> All PostgreSQL tables containing PHI use transparent data encryption (TDE)",
+        "fileStorage": "<strong>File Storage:</strong> Patient documents, images, and attachments stored in encrypted cloud buckets with per-object encryption keys"
+      },
+      "keyRotation": {
+        "title": "2.3 Key Rotation Policy",
+        "content": "Encryption keys are rotated annually or upon key compromise. Old keys are retained in secure, offline storage for a minimum of 7 years to support audit requirements and decryption of historical records."
+      }
+    },
+    "section3": {
+      "title": "3. Row-Level Security (RLS) Enforcement",
+      "intro": "The most powerful aspect of Doktochain's security model is database-enforced Row-Level Security. Unlike application-level access control that can potentially be bypassed through code vulnerabilities, RLS policies are enforced by the database engine itself, making unauthorized access impossible even if application security is compromised.",
+      "howItWorks": {
+        "title": "3.1 How RLS Works",
+        "intro": "Every query to the database is automatically filtered by RLS policies before results are returned. Users can only see rows they are explicitly authorized to see, based on:",
+        "userIdentity": "<strong>User Identity:</strong> The authenticated user's ID, role, and organizational affiliations",
+        "ownership": "<strong>Ownership Rules:</strong> Users can access their own records; providers can access patient records only with active consent",
+        "consentState": "<strong>Consent State:</strong> Database policies check in real-time whether a valid consent grant exists, including time-based expiration",
+        "organizational": "<strong>Organizational Membership:</strong> Clinic staff can access records only for clinics they are affiliated with"
+      },
+      "consentBased": {
+        "title": "3.2 Consent-Based Access Control",
+        "intro": "RLS policies actively enforce the Doktochain consent model. Every cross-boundary data access (e.g., a provider viewing a patient's health records) is checked against:",
+        "existence": "<strong>Consent Existence:</strong> Is there an active, non-expired consent grant from the patient?",
+        "scope": "<strong>Scope Verification:</strong> Does the consent cover the specific data being accessed?",
+        "timeWindow": "<strong>Time Window:</strong> Is the consent still within its validity period?",
+        "revocation": "<strong>Revocation Status:</strong> Has the patient revoked this consent?",
+        "failure": "If any check fails, the database returns zero rows—the data is literally invisible to the requesting user, regardless of their role or privileges."
+      },
+      "examples": {
+        "title": "3.3 RLS Policy Examples",
+        "intro": "A simplified example of how RLS policies protect patient health records:",
+        "patientSelf": "<strong>Patient Self-Access:</strong> SELECT allowed if user_id = auth.uid()",
+        "provider": "<strong>Provider Access:</strong> SELECT allowed if patient_id has granted an active, non-expired consent to the provider",
+        "pharmacy": "<strong>Pharmacy Access:</strong> SELECT prescription data if consent explicitly grants pharmacy visibility AND prescription is assigned to that pharmacy",
+        "admin": "<strong>Admin Access:</strong> Subject to organizational membership (clinic staff access only clinic records, platform admins access all)"
+      }
+    },
+    "section4": {
+      "title": "4. Zero-Knowledge Architecture Principles",
+      "intro": "Doktochain applies zero-knowledge principles to sensitive operations, ensuring that no party (including Doktochain staff) can access user data without explicit authorization and audit trail recording.",
+      "dataMinimization": {
+        "title": "4.1 Data Minimization",
+        "items": [
+          "Only health data necessary for direct patient care is collected",
+          "No data is retained longer than legally required",
+          "Users can request data deletion (subject to retention policies)",
+          "Backup data is encrypted and stored in isolated, secure facilities"
+        ]
+      },
+      "consentPrimitive": {
+        "title": "4.2 Consent as a First-Class Primitive",
+        "intro": "Consent is not an afterthought in Doktochain—it is a fundamental, database-enforced primitive. No data access occurs without explicit consent, and every consent grant includes:",
+        "items": [
+          "Clear statement of what data is being shared",
+          "Explicit purpose for access (e.g., \"treat patient condition\", \"fill prescription\")",
+          "Time-bound validity window (expires automatically unless renewed)",
+          "Granular scope (e.g., \"medication history only\", \"full health record\")",
+          "Patient-initiated revocation capability at any time"
+        ]
+      },
+      "staffRestrictions": {
+        "title": "4.3 Staff Data Access Restrictions",
+        "intro": "Even Doktochain staff cannot view patient data. Support access is:",
+        "items": [
+          "Explicitly logged in audit trail",
+          "Time-limited (automatically expires after session)",
+          "Approved by security team before granting",
+          "Visible to the patient in their audit trail"
+        ]
+      }
+    },
+    "section5": {
+      "title": "5. Consent Management System",
+      "intro": "The consent layer is the cornerstone of Doktochain's privacy protection. It balances healthcare interoperability needs with patient privacy through intelligent, time-bounded consent windows.",
+      "types": {
+        "title": "5.1 Consent Types",
+        "directCare": "<strong>Direct Care Consent:</strong> Patient grants provider access to treat a specific condition; valid for the appointment period plus 30 days for follow-up documentation",
+        "prescription": "<strong>Prescription Pharmacy Consent:</strong> Patient explicitly directs a prescription to a pharmacy; pharmacy can access only that prescription and related patient demographics",
+        "healthRecord": "<strong>Health Record Sharing:</strong> Patient grants another provider access to full or partial health history for continuity of care; typically 90 days",
+        "research": "<strong>Research/Aggregate Consent:</strong> Patient permits de-identified data use for platform analytics (optional, not required for service)"
+      },
+      "timeBound": {
+        "title": "5.2 Time-Bound Windows",
+        "intro": "All consent grants include automatic expiration times. After expiration, access is revoked automatically without additional user action. This prevents indefinite data access and encourages periodic re-consent conversations.",
+        "directCare": "Direct care access: Expires 30 days after last appointment interaction",
+        "prescription": "Prescription access: Expires when prescription is marked filled or 60 days, whichever is first",
+        "healthRecord": "Health record sharing: Expires 90 days unless explicitly renewed",
+        "emergency": "Emergency access: Expires after 24 hours (for life-threatening situations)"
+      },
+      "revocation": {
+        "title": "5.3 Revocation and Modification",
+        "intro": "Patients can revoke any consent at any time through their dashboard. Upon revocation:",
+        "items": [
+          "Access is immediately terminated (within milliseconds, enforced by database RLS)",
+          "A revocation event is recorded in the immutable audit trail",
+          "The revoking user receives confirmation",
+          "The affected provider is notified (to prevent use of outdated cached data)"
+        ]
+      }
+    },
+    "section6": {
+      "title": "6. Regulatory Compliance Framework",
+      "intro": "Doktochain is engineered to comply with all Canadian healthcare privacy regulations and international health data standards.",
+      "pipeda": {
+        "title": "6.1 PIPEDA Compliance (Federal)",
+        "intro": "Personal Information Protection and Electronic Documents Act (PIPEDA) governs private-sector data handling:",
+        "accountability": "<strong>Accountability:</strong> Designated privacy officer oversees compliance; policies documented and auditable",
+        "purpose": "<strong>Identifying Purpose:</strong> Users are informed of data collection purposes before providing information",
+        "consent": "<strong>Consent:</strong> Meaningful consent obtained; users can decline non-essential data collection",
+        "limiting": "<strong>Limiting Collection:</strong> Only necessary data is collected; no commercial profiling",
+        "useLimitation": "<strong>Use Limitation:</strong> Data used only for stated purposes or with explicit new consent",
+        "accuracy": "<strong>Accuracy:</strong> Data kept accurate and up-to-date; users can request corrections",
+        "safeguards": "<strong>Safeguards:</strong> Appropriate security measures (encryption, access controls, audit trails)",
+        "openness": "<strong>Openness:</strong> Privacy policies transparent and accessible",
+        "individualAccess": "<strong>Individual Access:</strong> Users can request and view their personal information",
+        "complaints": "<strong>Complaint Procedures:</strong> Clear process for reporting privacy concerns"
+      },
+      "provincial": {
+        "title": "6.2 Provincial Health Privacy Laws",
+        "intro": "In addition to PIPEDA, Doktochain complies with provincial health-specific legislation:",
+        "ontario": "<strong>Ontario (PHIPA):</strong> Personal Health Information Protection Act — governs health information handling by healthcare providers and facilities",
+        "alberta": "<strong>Alberta (HIA):</strong> Health Information Act — provides privacy protection for personal health information",
+        "bc": "<strong>British Columbia (PIPA):</strong> Personal Information Protection Act — applies to private-sector health organizations",
+        "quebec": "<strong>Quebec (Law 25):</strong> Updated privacy law with stronger consent and security requirements",
+        "other": "<strong>Manitoba, Saskatchewan, Nova Scotia:</strong> Similar provincial privacy legislation applicable in respective jurisdictions"
+      },
+      "hipaa": {
+        "title": "6.3 HIPAA Alignment (U.S. Reciprocity)",
+        "intro": "Though not required for Canadian operations, Doktochain exceeds HIPAA standards to support cross-border healthcare partnerships:",
+        "items": [
+          "Privacy Rule: Minimum necessary standard enforced",
+          "Security Rule: Technical safeguards exceed requirements (AES-256 vs. required encryption)",
+          "Breach Notification: Mandatory 60-day notification for any unauthorized access"
+        ]
+      },
+      "fhir": {
+        "title": "6.4 FHIR R4 Compliance",
+        "intro": "Doktochain's clinical data layer is designed around FHIR (Fast Healthcare Interoperability Resources) R4 standards, enabling seamless data exchange with external EHRs and provincial systems:",
+        "resources": "<strong>Supported Resources:</strong> Patient, Observation, Condition, Procedure, MedicationRequest, Immunization, AllergyIntolerance, Encounter, DiagnosticReport",
+        "coding": "<strong>Coding Systems:</strong> ICD-10 (diagnoses/conditions), SNOMED CT (clinical concepts), CPT (procedures), LOINC (lab results), DIN (medications)",
+        "validation": "<strong>Validation:</strong> All clinical data validated against FHIR schema before storage",
+        "export": "<strong>Export:</strong> Patients can export their complete health record in standard FHIR bundles"
+      }
+    },
+    "section7": {
+      "title": "7. Data Residency and Infrastructure Security",
+      "intro": "All patient data is stored and processed within Canada on dedicated, privately managed cloud infrastructure. This architecture provides full control over network isolation, encryption key management, and access policies while complying with Canadian data residency requirements.",
+      "hosting": {
+        "title": "7.1 Canadian Data Hosting",
+        "primary": "<strong>Primary Region:</strong> Montreal, Quebec (ca-central-1) — all compute, database, and storage resources deployed exclusively in Canadian data centres",
+        "dr": "<strong>Disaster Recovery Region:</strong> Calgary, Alberta (ca-west-1) — cross-region replication for business continuity",
+        "geographic": "<strong>Geographic Restriction:</strong> Data never leaves Canadian jurisdiction without explicit user consent; infrastructure policies enforce region-locked deployment",
+        "iac": "<strong>Infrastructure as Code:</strong> All cloud resources are defined declaratively, enabling reproducible deployments and auditable infrastructure changes"
+      },
+      "network": {
+        "title": "7.2 Network Security and Isolation",
+        "intro": "The platform operates within a private virtual network architecture designed to minimize attack surface and prevent unauthorized access to sensitive systems.",
+        "private": "<strong>Private Network Architecture:</strong> Database and compute resources run in private subnets with no direct internet access and no public IP addresses",
+        "outbound": "<strong>Outbound-Only Internet Access:</strong> Private resources reach external services (e.g., payment processors) through a network address translation gateway — no inbound connections are possible",
+        "pooling": "<strong>Connection Pooling Proxy:</strong> A managed proxy layer sits between compute functions and the database, enforcing connection limits, TLS encryption, and credential rotation without exposing the database endpoint",
+        "entry": "<strong>Single Public Entry Point:</strong> All API traffic enters through a managed API gateway that validates authentication tokens before any request reaches backend services",
+        "cdn": "<strong>Content Delivery Network:</strong> Static assets and frontend resources are served through a global CDN with web application firewall (WAF) rules for DDoS protection and request filtering",
+        "securityGroups": "<strong>Security Groups:</strong> Granular firewall rules restrict database access to only authorized compute functions — no other services or users can initiate connections"
+      },
+      "keyManagement": {
+        "title": "7.3 Key Management and Encryption Infrastructure",
+        "intro": "Encryption keys are managed through a dedicated, hardware-backed key management service that enforces separation of duties between key administrators and data users.",
+        "hsm": "<strong>Hardware Security Modules:</strong> All master encryption keys are generated and stored in FIPS 140-2 Level 3 validated hardware security modules",
+        "database": "<strong>Database Encryption:</strong> The managed PostgreSQL database uses transparent data encryption with dedicated, automatically rotated keys",
+        "fileStorage": "<strong>File Storage Encryption:</strong> Patient documents and attachments use server-side encryption with per-object keys derived from master keys",
+        "secrets": "<strong>Secrets Management:</strong> Third-party credentials (payment processor keys, video consultation tokens) are stored in a managed secrets vault with automatic rotation support",
+        "rotation": "<strong>Key Rotation:</strong> Master keys are rotated annually; data keys are rotated on every write operation; old keys are retained securely for historical decryption"
+      },
+      "monitoring": {
+        "title": "7.4 Audit and Monitoring Infrastructure",
+        "intro": "Beyond the application-level cryptographic audit trail (Section 1), the infrastructure itself maintains comprehensive logging and monitoring at every layer.",
+        "apiLogging": "<strong>API Activity Logging:</strong> Every cloud API call across the account is logged with caller identity, timestamp, source IP, and request parameters — retained for 90 days minimum",
+        "realtime": "<strong>Real-Time Monitoring:</strong> Custom dashboards and automated alarms monitor database performance, API error rates, authentication failures, and resource utilization",
+        "flowLogs": "<strong>Network Flow Logs:</strong> All network traffic within the private virtual network is logged for forensic analysis and anomaly detection",
+        "ledger": "<strong>Immutable Ledger Enhancement:</strong> As an additional layer of assurance, critical audit events can be replicated to a purpose-built immutable ledger database that provides cryptographic verification of data integrity, complementing the application-level hash-chain audit trail",
+        "alerting": "<strong>Alerting:</strong> Automated alerts notify the security team of suspicious patterns including repeated authentication failures, unusual data access volumes, and infrastructure configuration changes"
+      },
+      "disaster": {
+        "title": "7.5 Disaster Recovery and Business Continuity",
+        "rpo": "<strong>RPO (Recovery Point Objective):</strong> 1 hour — maximum data loss if disaster occurs",
+        "rto": "<strong>RTO (Recovery Time Objective):</strong> 15 minutes — platform available again after failover",
+        "backup": "<strong>Continuous Backup:</strong> The managed PostgreSQL database performs continuous backups with point-in-time recovery to any second within the retention window",
+        "multiAz": "<strong>Multi-AZ Redundancy:</strong> Database and compute resources are deployed across multiple availability zones within the primary region; automatic failover occurs if a zone becomes unavailable",
+        "crossRegion": "<strong>Cross-Region Replication:</strong> Critical data is replicated to the disaster recovery region for geographic redundancy",
+        "reproducibility": "<strong>Infrastructure Reproducibility:</strong> All resources are defined as code, enabling full environment reconstruction in a new region within hours if catastrophic regional failure occurs",
+        "testing": "<strong>Testing:</strong> Disaster recovery drills conducted quarterly; failover procedures tested and documented"
+      },
+      "soc2": {
+        "title": "7.6 SOC 2 Type II Certification",
+        "intro": "Doktochain undergoes annual SOC 2 Type II audits by independent third-party auditors, validating:",
+        "items": [
+          "Security controls are designed and operating effectively",
+          "Availability and processing integrity of systems",
+          "Confidentiality of patient information",
+          "Privacy controls comply with PIPEDA and provincial standards"
+        ]
+      }
+    },
+    "section8": {
+      "title": "8. Interoperability and Cross-System Trust",
+      "intro": "One of Doktochain's strengths is enabling secure health data sharing with external systems while maintaining complete audit accountability.",
+      "fhirGateway": {
+        "title": "8.1 FHIR Gateway Architecture",
+        "intro": "Doktochain operates a FHIR gateway that allows external EHRs and provincial health systems to request patient records. All requests go through the same security pipeline:",
+        "items": [
+          "Request includes patient ID and the requesting system's OAuth credentials",
+          "Gateway checks if patient has granted consent to the requesting system",
+          "If consent is active and time-valid, patient's FHIR bundle is returned (encrypted)",
+          "Request is logged to immutable audit trail with system identity and timestamp",
+          "Patient sees the request in their audit trail immediately"
+        ]
+      },
+      "provincial": {
+        "title": "8.2 Provincial EHR Connections (COMING SOON ...)",
+        "intro": "Doktochain integrates with provincial health information exchanges where available:",
+        "ontario": "<strong>Ontario:</strong> Connegta (provincial health information portal)",
+        "alberta": "<strong>Alberta:</strong> Access 24/7 (provincial health record system)",
+        "bc": "<strong>British Columbia:</strong> Health Information Exchange (HIE) pilot connections",
+        "note": "These integrations are read-only; patient data is never pushed without explicit consent, and every read is audited."
+      },
+      "prescription": {
+        "title": "8.3 Prescription Workflow Auditing",
+        "intro": "The prescription pipeline illustrates complete audit coverage:",
+        "items": [
+          "Provider writes prescription → audit entry created with provider identity and reason",
+          "Patient receives notification → receipt logged",
+          "Patient directs to specific pharmacy → redirection decision logged with timestamp",
+          "Pharmacy receives prescription → access logged with pharmacy identity",
+          "Pharmacy fills or declines → fulfillment decision logged",
+          "Patient views filled status → access logged",
+          "All actions recorded to immutable hash-chain; any party can independently verify integrity"
+        ]
+      }
+    },
+    "section9": {
+      "title": "9. Security Testing and Incident Response",
+      "penetration": {
+        "title": "9.1 Penetration Testing",
+        "intro": "Doktochain undergoes quarterly penetration testing by independent security firms. Tests cover:",
+        "items": [
+          "Network layer attacks (port scanning, protocol exploits)",
+          "Application layer attacks (SQL injection, XSS, CSRF)",
+          "Authentication/authorization bypass attempts",
+          "Encryption algorithm and implementation weaknesses",
+          "RLS policy bypass attempts",
+          "Audit trail tampering scenarios"
+        ]
+      },
+      "codeReview": {
+        "title": "9.2 Security Code Review",
+        "content": "All code changes undergo security-focused review before deployment. Automated scanning detects known vulnerabilities; senior engineers verify no novel security issues are introduced."
+      },
+      "incident": {
+        "title": "9.3 Incident Response Plan",
+        "intro": "In the event of a security incident:",
+        "detection": "<strong>Detection:</strong> 24/7 monitoring of logs, intrusion detection systems, and audit alerts",
+        "response": "<strong>Response:</strong> Incident response team activated within 15 minutes; affected systems isolated",
+        "investigation": "<strong>Investigation:</strong> Forensic analysis using immutable audit trail; determine scope and cause",
+        "notification": "<strong>Notification:</strong> Affected users and regulators notified within 72 hours (per PIPEDA)",
+        "remediation": "<strong>Remediation:</strong> Fixes deployed; security improvements implemented to prevent recurrence"
+      }
+    },
+    "section10": {
+      "title": "10. Technical Specifications and Standards Reference",
+      "cryptographic": {
+        "title": "10.1 Cryptographic Standards",
+        "tableHeaders": {
+          "component": "Component",
+          "standard": "Standard",
+          "details": "Details"
+        },
+        "rows": [
+          {
+            "component": "Hash Algorithm",
+            "standard": "SHA-256",
+            "details": "NIST FIPS 180-4; 256-bit output"
+          },
+          {
+            "component": "Encryption (at rest)",
+            "standard": "AES-256-GCM",
+            "details": "NIST FIPS 197; authenticated encryption"
+          },
+          {
+            "component": "Encryption (in transit)",
+            "standard": "TLS 1.3",
+            "details": "RFC 8446; forward secrecy enforced"
+          },
+          {
+            "component": "Key Exchange",
+            "standard": "ECDHE",
+            "details": "Elliptic Curve Diffie-Hellman Ephemeral"
+          },
+          {
+            "component": "Message Authentication",
+            "standard": "HMAC-SHA256",
+            "details": "Integrity verification"
+          },
+          {
+            "component": "Key Management",
+            "standard": "HSM-backed KMS",
+            "details": "FIPS 140-2 Level 3; automatic annual rotation"
+          },
+          {
+            "component": "Network Isolation",
+            "standard": "Private VPC",
+            "details": "Private subnets; no public database endpoints"
+          },
+          {
+            "component": "Audit Infrastructure",
+            "standard": "API activity logging + immutable ledger",
+            "details": "Full API call logging; optional cryptographic ledger"
+          }
+        ]
+      },
+      "regulatory": {
+        "title": "10.2 Regulatory References",
+        "items": [
+          "PIPEDA (Personal Information Protection and Electronic Documents Act) — S.C. 1998, c. 5",
+          "PHIPA (Ontario Personal Health Information Protection Act) — S.O. 2004, c. 3",
+          "HIA (Alberta Health Information Act) — RSA 2000, c. H-5",
+          "PIPA (BC Personal Information Protection Act) — S.B.C. 2003, c. 63",
+          "FHIR R4 — https://www.hl7.org/fhir/R4/",
+          "SOC 2 Type II — AICPA Trust Services Criteria"
+        ]
+      }
+    },
+    "commitment": {
+      "title": "Commitment to Transparency",
+      "content": "Doktochain's security model is designed for transparency and patient empowerment. Patients can view their complete audit trail, revoke consent at any time, and independently verify data integrity. We believe that trust in healthcare technology is built not through security theater, but through verifiable, auditable systems. This whitepaper is available to healthcare institutions, regulators, and patients for evaluation and independent verification."
+    }
+  },
+  "privacy": {
+    "intro1": "Doktochain Inc. (\"Doktochain\", \"we\", \"us\", or \"our\") is committed to protecting the privacy and security of personal information, including personal health information (PHI), collected through our platform. This Privacy Policy describes how we collect, use, disclose, and safeguard your information when you use the Doktochain platform, website, and related services.",
+    "intro2": "We operate in compliance with the Personal Information Protection and Electronic Documents Act (PIPEDA) and applicable provincial health privacy legislation, including Ontario's Personal Health Information Protection Act (PHIPA), Alberta's Health Information Act (HIA), and British Columbia's Personal Information Protection Act (PIPA).",
+    "section2": {
+      "title": "2. Information We Collect",
+      "personal": {
+        "title": "2.1 Personal Information",
+        "intro": "We may collect the following types of personal information:",
+        "items": [
+          "Full name, date of birth, gender, and contact information (email, phone, address)",
+          "Government-issued identification numbers (health card numbers) for insurance verification",
+          "Account credentials and authentication data",
+          "Payment and billing information",
+          "Professional credentials and licensing information (for healthcare providers)"
+        ]
+      },
+      "health": {
+        "title": "2.2 Personal Health Information",
+        "intro": "When you use our healthcare services, we may collect:",
+        "items": [
+          "Medical history, diagnoses, and treatment records",
+          "Prescription and medication information",
+          "Lab results, imaging reports, and clinical notes",
+          "Allergy and immunization records",
+          "Vital signs and health tracking data",
+          "Telemedicine consultation recordings (with consent)"
+        ]
+      },
+      "technical": {
+        "title": "2.3 Technical Information",
+        "items": [
+          "Device type, operating system, and browser information",
+          "IP address and approximate location data",
+          "Usage patterns and interaction data within the platform",
+          "Cookies and similar tracking technologies"
+        ]
+      }
+    },
+    "section3": {
+      "title": "3. How We Use Your Information",
+      "intro": "We use the information we collect to:",
+      "items": [
+        "Provide, maintain, and improve our healthcare platform services",
+        "Facilitate appointments, consultations, and prescription management",
+        "Process payments and manage billing",
+        "Communicate with you about appointments, prescriptions, and account matters",
+        "Ensure the security and integrity of our platform",
+        "Comply with legal and regulatory obligations",
+        "Generate anonymized analytics to improve healthcare outcomes"
+      ]
+    },
+    "section4": {
+      "title": "4. Consent",
+      "intro": "Doktochain employs a database-enforced consent model. Before any healthcare provider can access your health information, you must provide explicit consent through our platform. Key features of our consent model include:",
+      "items": [
+        "<strong>Granular consent:</strong> You control which providers can access specific categories of your health data",
+        "<strong>Time-based access windows:</strong> Consent grants are limited to specific time periods relevant to your care",
+        "<strong>Revocable at any time:</strong> You may withdraw consent at any time through your patient dashboard",
+        "<strong>Audit trail:</strong> Every consent action is recorded in our tamper-evident hash-chain audit system"
+      ]
+    },
+    "section5": {
+      "title": "5. How We Share Your Information",
+      "intro": "We may share your information only in the following circumstances:",
+      "items": [
+        "<strong>With your healthcare providers:</strong> Only with your explicit consent and within approved time windows",
+        "<strong>With pharmacies:</strong> When you direct a prescription to a pharmacy of your choice",
+        "<strong>With payment processors:</strong> To process payments securely through Stripe",
+        "<strong>As required by law:</strong> When compelled by legal process, regulation, or to protect safety",
+        "<strong>With your express authorization:</strong> For any other purposes you specifically approve"
+      ],
+      "noSale": "We never sell your personal information or personal health information to third parties."
+    },
+    "section6": {
+      "title": "6. Data Security",
+      "intro": "We implement comprehensive security measures including:",
+      "items": [
+        "End-to-end encryption for data in transit and at rest",
+        "Row-Level Security (RLS) enforced at the database level",
+        "Cryptographic hash-chain audit trail for all data access events",
+        "Multi-factor authentication support",
+        "Regular security assessments and penetration testing",
+        "FHIR R4-compliant data structures for healthcare interoperability"
+      ]
+    },
+    "section7": {
+      "title": "7. Data Retention",
+      "content": "We retain personal health information in accordance with applicable Canadian healthcare legislation. Medical records are retained for a minimum of 10 years from the last date of service, or longer as required by provincial regulations. You may request deletion of non-clinical personal information by contacting our privacy office."
+    },
+    "section8": {
+      "title": "8. Your Rights",
+      "intro": "Under PIPEDA and applicable provincial legislation, you have the right to:",
+      "items": [
+        "Access your personal information and health records at no cost",
+        "Request corrections to inaccurate information",
+        "Withdraw consent for data collection and use",
+        "File a complaint with our Privacy Officer or the Office of the Privacy Commissioner of Canada",
+        "Export your health data in FHIR-compatible formats"
+      ]
+    },
+    "section9": {
+      "title": "9. Children's Privacy",
+      "content": "Our platform supports family accounts where parents or legal guardians can manage health information for minor dependents. We do not knowingly collect personal information from children under 13 without verifiable parental consent."
+    },
+    "section10": {
+      "title": "10. Contact Us",
+      "intro": "If you have questions about this Privacy Policy or wish to exercise your privacy rights, please contact our Privacy Officer:",
+      "items": [
+        "Email: privacy@doktochain.ca",
+        "Phone: 1-800-DOKTO-CHAIN",
+        "Address: Toronto, ON, Canada"
+      ]
+    }
+  },
+  "terms": {
+    "section1": {
+      "title": "1. Acceptance of Terms",
+      "content": "By accessing or using the Doktochain platform (\"Platform\"), you agree to be bound by these Terms of Service (\"Terms\"). If you do not agree to these Terms, you may not access or use the Platform. These Terms constitute a legally binding agreement between you and Doktochain Inc. (\"Doktochain\", \"we\", \"us\", or \"our\")."
+    },
+    "section2": {
+      "title": "2. Description of Services",
+      "intro": "Doktochain is a healthcare technology platform that connects patients with healthcare providers and pharmacies across Canada. Our services include:",
+      "items": [
+        "Provider discovery and appointment booking",
+        "Video and in-person consultation facilitation",
+        "Electronic prescription management and pharmacy fulfillment",
+        "Health records management and secure data sharing",
+        "Payment processing for healthcare services",
+        "Practice management tools for healthcare providers"
+      ],
+      "disclaimer": "<strong>Important:</strong> Doktochain is a technology platform and does not provide medical advice, diagnosis, or treatment. All clinical decisions are made independently by licensed healthcare providers."
+    },
+    "section3": {
+      "title": "3. User Accounts",
+      "registration": {
+        "title": "3.1 Registration",
+        "content": "To use certain features of the Platform, you must create an account. You agree to provide accurate, current, and complete information during registration and to keep your account information updated."
+      },
+      "accountTypes": {
+        "title": "3.2 Account Types",
+        "items": [
+          "<strong>Patient accounts:</strong> For individuals seeking healthcare services",
+          "<strong>Provider accounts:</strong> For licensed healthcare professionals (subject to credential verification)",
+          "<strong>Pharmacy accounts:</strong> For licensed pharmacies (subject to licensing verification)",
+          "<strong>Clinic accounts:</strong> For healthcare organizations managing multiple providers"
+        ]
+      },
+      "security": {
+        "title": "3.3 Account Security",
+        "content": "You are responsible for maintaining the confidentiality of your account credentials. You must immediately notify us of any unauthorized use of your account. We are not liable for any loss arising from unauthorized use of your account."
+      }
+    },
+    "section4": {
+      "title": "4. Healthcare Provider Terms",
+      "intro": "Healthcare providers using the Platform agree to:",
+      "items": [
+        "Maintain valid and current professional licenses in their practicing province(s)",
+        "Provide accurate credential and qualification information",
+        "Comply with all applicable medical regulations and standards of care",
+        "Maintain appropriate professional liability insurance",
+        "Use the Platform's consent system before accessing patient data",
+        "Document clinical encounters in accordance with regulatory requirements"
+      ]
+    },
+    "section5": {
+      "title": "5. Pharmacy Terms",
+      "intro": "Pharmacies using the Platform agree to:",
+      "items": [
+        "Maintain valid pharmacy licenses in their operating province(s)",
+        "Dispense medications in accordance with applicable pharmacy regulations",
+        "Maintain accurate inventory records",
+        "Process prescriptions received through the Platform in a timely manner",
+        "Comply with all drug safety and reporting obligations"
+      ]
+    },
+    "section6": {
+      "title": "6. Patient Terms",
+      "intro": "Patients using the Platform agree to:",
+      "items": [
+        "Provide accurate personal and health information",
+        "Understand that telemedicine has limitations compared to in-person visits",
+        "Seek emergency care by calling 911 for emergencies, not through the Platform",
+        "Make timely payment for services rendered",
+        "Manage consent grants responsibly"
+      ]
+    },
+    "section7": {
+      "title": "7. Payments and Fees",
+      "patientPayments": {
+        "title": "7.1 Patient Payments",
+        "content": "Patients are responsible for payment of consultation fees, prescription costs, and any other charges incurred through the Platform. Payments are processed securely through Stripe."
+      },
+      "subscriptions": {
+        "title": "7.2 Provider and Pharmacy Subscriptions",
+        "content": "Providers and pharmacies may be subject to subscription fees as outlined in their selected plan. Transaction fees may apply to certain payment types as specified in the pricing schedule."
+      },
+      "refunds": {
+        "title": "7.3 Refunds",
+        "content": "Refund policies vary by service type. Cancelled appointments may be subject to cancellation fees as specified by the provider. Disputed charges should be reported within 30 days."
+      }
+    },
+    "section8": {
+      "title": "8. Intellectual Property",
+      "content": "The Platform, including its design, features, content, and underlying technology, is owned by Doktochain and is protected by Canadian and international intellectual property laws. Users retain ownership of their personal data and health records."
+    },
+    "section9": {
+      "title": "9. Prohibited Conduct",
+      "intro": "You agree not to:",
+      "items": [
+        "Use the Platform for any unlawful purpose",
+        "Attempt to access another user's account or data without authorization",
+        "Interfere with or disrupt the Platform's operation",
+        "Upload malicious software or content",
+        "Scrape, crawl, or otherwise extract data from the Platform",
+        "Impersonate any person or entity",
+        "Use the Platform to distribute unsolicited communications"
+      ]
+    },
+    "section10": {
+      "title": "10. Limitation of Liability",
+      "para1": "To the maximum extent permitted by law, Doktochain shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the Platform. Our total liability shall not exceed the fees you paid to us in the 12 months preceding the claim.",
+      "para2": "Doktochain is not responsible for the quality of care provided by healthcare providers or the accuracy of information provided by pharmacies on the Platform."
+    },
+    "section11": {
+      "title": "11. Termination",
+      "content": "Either party may terminate the relationship at any time. We may suspend or terminate your account if you violate these Terms. Upon termination, your right to use the Platform ceases, but provisions regarding data retention, intellectual property, and limitation of liability shall survive."
+    },
+    "section12": {
+      "title": "12. Governing Law",
+      "content": "These Terms are governed by and construed in accordance with the laws of the Province of Ontario and the federal laws of Canada applicable therein. Any disputes shall be resolved in the courts of Ontario, Canada."
+    },
+    "section13": {
+      "title": "13. Changes to These Terms",
+      "content": "We may update these Terms from time to time. We will notify you of material changes through the Platform or via email. Your continued use of the Platform after changes become effective constitutes acceptance of the updated Terms."
+    },
+    "section14": {
+      "title": "14. Contact",
+      "intro": "For questions about these Terms, please contact us:",
+      "items": [
+        "Email: legal@doktochain.ca",
+        "Phone: 1-800-DOKTO-CHAIN",
+        "Address: Toronto, ON, Canada"
+      ]
+    }
+  },
+  "cookies": {
+    "section1": {
+      "title": "1. What Are Cookies",
+      "content": "Cookies are small text files stored on your device when you visit a website. They help the website remember your preferences and understand how you interact with it. Doktochain uses cookies and similar technologies to provide, secure, and improve our platform."
+    },
+    "section2": {
+      "title": "2. How We Use Cookies",
+      "intro": "We use cookies for the following purposes:",
+      "essential": {
+        "title": "2.1 Essential Cookies",
+        "intro": "These cookies are necessary for the Platform to function and cannot be disabled. They include:",
+        "items": [
+          "<strong>Authentication cookies:</strong> Keep you logged in securely during your session",
+          "<strong>Security cookies:</strong> Protect against cross-site request forgery and other threats",
+          "<strong>Session management:</strong> Maintain your session state as you navigate the Platform",
+          "<strong>Consent preferences:</strong> Remember your cookie consent choices"
+        ]
+      },
+      "functional": {
+        "title": "2.2 Functional Cookies",
+        "intro": "These cookies enable enhanced functionality and personalization:",
+        "items": [
+          "<strong>Language preferences:</strong> Remember your preferred language settings",
+          "<strong>Theme preferences:</strong> Store your display preferences (light/dark mode)",
+          "<strong>Recent searches:</strong> Remember your recent provider or specialty searches"
+        ]
+      },
+      "analytics": {
+        "title": "2.3 Analytics Cookies",
+        "intro": "These cookies help us understand how users interact with the Platform so we can improve it:",
+        "items": [
+          "Page view and navigation patterns",
+          "Feature usage statistics",
+          "Error and performance monitoring"
+        ],
+        "note": "Analytics data is aggregated and anonymized. We do not use analytics cookies to track individual health information or clinical interactions."
+      }
+    },
+    "section3": {
+      "title": "3. Third-Party Cookies",
+      "intro": "Some third-party services used by Doktochain may set their own cookies:",
+      "items": [
+        "<strong>Supabase:</strong> Authentication and session management",
+        "<strong>Stripe:</strong> Payment processing and fraud prevention",
+        "<strong>Daily.co:</strong> Video consultation functionality"
+      ],
+      "note": "These third parties have their own privacy and cookie policies. We encourage you to review their policies for more information."
+    },
+    "section4": {
+      "title": "4. Managing Cookies",
+      "intro": "You can manage cookies through several methods:",
+      "browser": {
+        "title": "4.1 Browser Settings",
+        "content": "Most web browsers allow you to control cookies through their settings. You can typically find these under \"Privacy\" or \"Security\" in your browser preferences. Note that disabling essential cookies may prevent you from using certain Platform features."
+      },
+      "controls": {
+        "title": "4.2 Specific Cookie Controls",
+        "items": [
+          "<strong>Essential cookies:</strong> Cannot be disabled as they are required for Platform operation",
+          "<strong>Functional cookies:</strong> Can be disabled, but some features may not work as expected",
+          "<strong>Analytics cookies:</strong> Can be opted out of without affecting Platform functionality"
+        ]
+      }
+    },
+    "section5": {
+      "title": "5. Data Protection",
+      "content": "Cookie data is handled in accordance with our Privacy Policy and PIPEDA requirements. We do not store personal health information in cookies. Authentication tokens stored in cookies are encrypted and expire after the session ends."
+    },
+    "section6": {
+      "title": "6. Updates to This Policy",
+      "content": "We may update this Cookie Policy as our technology or legal requirements change. We will notify you of significant changes through the Platform."
+    },
+    "section7": {
+      "title": "7. Contact",
+      "intro": "For questions about our use of cookies, please contact:",
+      "items": [
+        "Email: privacy@doktochain.ca",
+        "Phone: 1-800-DOKTO-CHAIN"
+      ]
+    }
+  },
+  "hipaa": {
+    "section1": {
+      "title": "1. Overview",
+      "content": "While Doktochain is a Canadian healthcare platform primarily governed by PIPEDA and provincial health privacy legislation, we recognize that healthcare data protection standards are international in scope. We design our security and privacy practices to meet or exceed the standards set by both Canadian legislation and the United States Health Insurance Portability and Accountability Act (HIPAA)."
+    },
+    "section2": {
+      "title": "2. Canadian Privacy Framework",
+      "intro": "Doktochain operates in compliance with:",
+      "items": [
+        "<strong>PIPEDA</strong> -- Personal Information Protection and Electronic Documents Act (federal)",
+        "<strong>PHIPA</strong> -- Personal Health Information Protection Act (Ontario)",
+        "<strong>HIA</strong> -- Health Information Act (Alberta)",
+        "<strong>PIPA</strong> -- Personal Information Protection Act (British Columbia)",
+        "<strong>Act Respecting the Protection of Personal Information in the Private Sector</strong> (Quebec)"
+      ],
+      "note": "These laws collectively provide comprehensive protection for personal health information that is comparable to, and in many respects exceeds, HIPAA requirements."
+    },
+    "section3": {
+      "title": "3. Security Safeguards",
+      "intro": "Doktochain implements administrative, technical, and physical safeguards that align with both Canadian requirements and HIPAA's Security Rule:",
+      "administrative": {
+        "title": "3.1 Administrative Safeguards",
+        "items": [
+          "Designated Privacy Officer responsible for compliance oversight",
+          "Regular risk assessments and security audits",
+          "Workforce training on privacy and security practices",
+          "Incident response and breach notification procedures",
+          "Business Associate Agreements with all service providers handling PHI"
+        ]
+      },
+      "technical": {
+        "title": "3.2 Technical Safeguards",
+        "items": [
+          "<strong>Access controls:</strong> Role-based access with Row-Level Security (RLS) enforced at the database layer",
+          "<strong>Encryption:</strong> AES-256 encryption at rest, TLS 1.3 in transit",
+          "<strong>Audit logging:</strong> Cryptographic hash-chain audit trail for all data access events",
+          "<strong>Authentication:</strong> Secure authentication with multi-factor authentication support",
+          "<strong>Consent enforcement:</strong> Database-level consent checks with time-based access windows",
+          "<strong>Data integrity:</strong> FHIR R4-compliant data structures with referential integrity constraints"
+        ]
+      },
+      "physical": {
+        "title": "3.3 Physical Safeguards",
+        "items": [
+          "Data hosted on SOC 2 Type II certified infrastructure",
+          "Canadian data residency -- all health data stored within Canada",
+          "Redundant backups with geographic distribution within Canadian borders",
+          "Environmental controls and physical access restrictions at data centers"
+        ]
+      }
+    },
+    "section4": {
+      "title": "4. Consent-Based Access Model",
+      "intro": "Doktochain's consent model goes beyond minimum regulatory requirements by implementing database-enforced consent that cannot be bypassed by application-level code:",
+      "items": [
+        "Every cross-provider data access requires active patient consent",
+        "Consent grants include specific time windows and data categories",
+        "All consent actions are recorded in the tamper-evident audit trail",
+        "Patients can view, modify, and revoke consent at any time",
+        "Expired consent windows automatically terminate access"
+      ]
+    },
+    "section5": {
+      "title": "5. Breach Notification",
+      "intro": "In the event of a data breach involving personal health information, Doktochain will:",
+      "items": [
+        "Notify affected individuals as soon as feasible, and no later than required by applicable law",
+        "Report to the Office of the Privacy Commissioner of Canada and relevant provincial regulators",
+        "Document the breach, its impact, and remediation steps taken",
+        "Implement measures to prevent recurrence"
+      ]
+    },
+    "section6": {
+      "title": "6. Patient Rights",
+      "intro": "Consistent with both Canadian privacy law and HIPAA's Privacy Rule, Doktochain ensures patients can:",
+      "items": [
+        "Access their complete health records at no charge through the patient dashboard",
+        "Request amendments to their records",
+        "Receive an accounting of disclosures via the audit trail",
+        "Export their data in FHIR-compatible formats",
+        "File complaints with the Privacy Officer or relevant regulatory bodies"
+      ]
+    },
+    "section7": {
+      "title": "7. Continuous Improvement",
+      "intro": "We continuously evaluate and enhance our security posture through:",
+      "items": [
+        "Regular penetration testing and vulnerability assessments",
+        "Annual compliance reviews against evolving regulatory standards",
+        "Ongoing monitoring of security threats and industry best practices",
+        "Staff training and awareness programs"
+      ]
+    },
+    "section8": {
+      "title": "8. Contact",
+      "intro": "For questions about our compliance practices or to report a security concern:",
+      "items": [
+        "Privacy Officer: privacy@doktochain.ca",
+        "Security Team: security@doktochain.ca",
+        "Phone: 1-800-DOKTO-CHAIN"
+      ],
+      "moreInfo": "For more information about how we protect your data, please review our"
+    }
+  },
+  "accessibility": {
+    "title": "Accessibility",
+    "section1": {
+      "title": "1. Our Commitment",
+      "para1": "Doktochain is committed to ensuring that our platform is accessible to all users, including people with disabilities. We believe that everyone deserves equal access to healthcare services, and we strive to make our digital experience as inclusive as possible.",
+      "para2": "We are committed to meeting or exceeding the requirements of the Accessibility for Ontarians with Disabilities Act (AODA) and the Web Content Accessibility Guidelines (WCAG) 2.1 Level AA."
+    },
+    "section2": {
+      "title": "2. Accessibility Standards",
+      "intro": "Our platform is designed and developed to conform with:",
+      "items": [
+        "<strong>WCAG 2.1 Level AA:</strong> The internationally recognized standard for web accessibility",
+        "<strong>AODA:</strong> Accessibility for Ontarians with Disabilities Act, Integrated Accessibility Standards Regulation",
+        "<strong>ACA:</strong> Accessible Canada Act requirements for federally regulated entities"
+      ]
+    },
+    "section3": {
+      "title": "3. Accessibility Features",
+      "visual": {
+        "title": "3.1 Visual Accessibility",
+        "items": [
+          "Sufficient color contrast ratios throughout the interface",
+          "Resizable text that can be scaled up to 200% without loss of content",
+          "Alternative text for all meaningful images and icons",
+          "Clear visual focus indicators for keyboard navigation",
+          "No content that relies solely on color to convey information"
+        ]
+      },
+      "navigation": {
+        "title": "3.2 Navigation and Interaction",
+        "items": [
+          "Full keyboard navigability for all Platform features",
+          "Logical tab order and focus management",
+          "Skip navigation links for quick access to main content",
+          "Consistent navigation patterns across all pages",
+          "Clear and descriptive link text"
+        ]
+      },
+      "content": {
+        "title": "3.3 Content Accessibility",
+        "items": [
+          "Clear heading hierarchy for screen reader navigation",
+          "Descriptive labels for all form fields",
+          "Error messages that clearly identify and describe issues",
+          "Sufficient time provided for time-sensitive actions",
+          "Content structured with semantic HTML elements"
+        ]
+      },
+      "assistive": {
+        "title": "3.4 Assistive Technology Support",
+        "items": [
+          "ARIA landmarks and roles for screen reader compatibility",
+          "Live regions for dynamic content updates",
+          "Compatible with popular screen readers (NVDA, JAWS, VoiceOver)",
+          "Support for browser zoom and text-only zoom"
+        ]
+      }
+    },
+    "section4": {
+      "title": "4. Telemedicine Accessibility",
+      "intro": "Our video consultation features are designed with accessibility in mind:",
+      "items": [
+        "Keyboard-accessible video controls",
+        "Secure messaging as an alternative communication channel",
+        "Clear audio indicators for connection status",
+        "Compatibility with assistive devices"
+      ]
+    },
+    "section5": {
+      "title": "5. Ongoing Efforts",
+      "intro": "We are continuously working to improve accessibility through:",
+      "items": [
+        "Regular accessibility audits by qualified assessors",
+        "Automated and manual testing during development",
+        "User feedback incorporation from people with disabilities",
+        "Staff training on accessibility best practices",
+        "Monitoring of accessibility standards updates"
+      ]
+    },
+    "section6": {
+      "title": "6. Known Limitations",
+      "content": "While we strive for full accessibility, some third-party content or features may have limitations beyond our direct control. We work with our technology partners to advocate for improved accessibility in their services, including video conferencing and payment processing components."
+    },
+    "section7": {
+      "title": "7. Feedback and Assistance",
+      "intro": "We welcome your feedback on the accessibility of the Doktochain platform. If you encounter any accessibility barriers or need assistance, please contact us:",
+      "items": [
+        "Email: accessibility@doktochain.ca",
+        "Phone: 1-800-DOKTO-CHAIN",
+        "Address: Toronto, ON, Canada"
+      ],
+      "response": "We aim to respond to accessibility feedback within 2 business days and to resolve reported barriers as quickly as possible."
+    },
+    "section8": {
+      "title": "8. Formal Complaints",
+      "content": "If you are not satisfied with our response to an accessibility concern, you may file a formal complaint with the Accessibility Directorate of Ontario or the relevant provincial accessibility body."
+    }
+  },
+  "refund": {
+    "section1": {
+      "title": "1. Overview",
+      "content": "Doktochain Inc. (\"Doktochain\", \"we\", \"us\", or \"our\") is committed to fair and transparent refund practices for all services offered through our platform. This Refund Policy outlines the circumstances under which full or partial refunds may be granted for consultation fees, subscription plans, and pharmacy orders. By using the Doktochain platform, you agree to the terms of this Refund Policy."
+    },
+    "section2": {
+      "title": "2. Refund Eligibility by Service Type",
+      "intro": "Refund eligibility varies depending on the type of service. The following sections describe the specific refund terms for each service category offered through the Doktochain platform.",
+      "consultations": {
+        "title": "2.1 Medical Consultations (In-Person and Telemedicine)",
+        "intro": "Refund eligibility for medical consultations depends on when the cancellation occurs and whether the consultation was completed:",
+        "items": [
+          "<strong>Cancellation more than 24 hours before the appointment:</strong> Full refund of the consultation fee",
+          "<strong>Cancellation between 4 and 24 hours before the appointment:</strong> Partial refund of 50% of the consultation fee",
+          "<strong>Cancellation less than 4 hours before the appointment or no-show:</strong> No refund; the full consultation fee is retained",
+          "<strong>Technical failure (platform or provider side):</strong> Full refund if the consultation could not take place due to platform-related technical issues, verified by our support team",
+          "<strong>Provider cancellation:</strong> Full refund issued automatically if the healthcare provider cancels the appointment"
+        ]
+      },
+      "subscriptions": {
+        "title": "2.2 Subscription Plans (Providers, Pharmacies, and Clinics)",
+        "intro": "Subscription fees for healthcare providers, pharmacies, and clinics are subject to the following refund terms:",
+        "items": [
+          "<strong>Free trial period:</strong> No charge during the trial period. You will not be billed if you cancel before the trial expires",
+          "<strong>Cancellation within 14 days of first paid billing:</strong> Full refund of the current billing period, provided no significant platform usage has occurred (e.g., fewer than 5 patient interactions)",
+          "<strong>Cancellation after 14 days of paid billing:</strong> No refund for the current billing period. Your subscription will remain active until the end of the current billing cycle",
+          "<strong>Annual subscription cancellation:</strong> Partial refund calculated on a pro-rata basis for unused full months remaining in the annual term, minus a 10% early termination fee",
+          "<strong>Downgrade:</strong> No refund for the current period. The lower-tier pricing takes effect at the start of the next billing cycle"
+        ]
+      },
+      "pharmacy": {
+        "title": "2.3 Pharmacy Orders and Prescriptions",
+        "intro": "Refunds for pharmacy orders are subject to health and safety regulations:",
+        "items": [
+          "<strong>Order cancelled before dispensing:</strong> Full refund if the pharmacy has not yet begun preparing the order",
+          "<strong>Order cancelled after dispensing:</strong> No refund, as dispensed medications cannot be restocked per Canadian pharmacy regulations",
+          "<strong>Incorrect or damaged order:</strong> Full refund or replacement for orders that arrive damaged, contain the wrong medication, or have incorrect quantities. You must report the issue within 48 hours of receipt",
+          "<strong>OTC products (over-the-counter):</strong> Full refund within 14 days of delivery if the product is unopened and in its original packaging. Opened OTC products are not eligible for refund"
+        ]
+      }
+    },
+    "section3": {
+      "title": "3. Full vs. Partial Refund Breakdown",
+      "intro": "The following summarizes the conditions for full and partial refunds across all service categories.",
+      "full": {
+        "title": "3.1 Full Refund Conditions",
+        "intro": "A full refund (100% of the amount paid) is issued under the following circumstances:",
+        "items": [
+          "Consultation cancelled more than 24 hours in advance",
+          "Provider cancels the appointment for any reason",
+          "Platform technical failure that prevents the consultation from occurring",
+          "Subscription cancelled within 14 days of first paid billing (with minimal usage)",
+          "Pharmacy order cancelled before dispensing has begun",
+          "Incorrect or damaged pharmacy order reported within 48 hours",
+          "Duplicate charge or billing error confirmed by our billing team"
+        ]
+      },
+      "partial": {
+        "title": "3.2 Partial Refund Conditions",
+        "intro": "A partial refund is issued when the service was partially delivered or the cancellation falls within a late-notice window:",
+        "items": [
+          "<strong>50% refund:</strong> Consultation cancelled between 4 and 24 hours before the scheduled time",
+          "<strong>Pro-rata refund (minus 10% fee):</strong> Annual subscription cancelled after 14 days, calculated for unused full months remaining",
+          "<strong>Case-by-case:</strong> Consultations where significant technical issues occurred partway through the session, assessed by our support team",
+          "<strong>Partial delivery:</strong> Pharmacy orders where only a portion of the items were incorrect or damaged"
+        ]
+      },
+      "nonRefundable": {
+        "title": "3.3 Non-Refundable Charges",
+        "intro": "The following charges are not eligible for any refund:",
+        "items": [
+          "Consultations that were completed in full",
+          "No-show appointments (patient did not attend without prior cancellation)",
+          "Cancellations made less than 4 hours before the scheduled appointment",
+          "Dispensed prescription medications (per Canadian pharmacy regulations)",
+          "Opened over-the-counter products",
+          "Monthly subscription fees after the 14-day refund window has passed",
+          "Payment processing fees charged by third-party providers (Stripe)"
+        ]
+      }
+    },
+    "section4": {
+      "title": "4. How to Request a Refund",
+      "intro": "To request a refund, follow these steps:",
+      "items": [
+        "<strong>Step 1:</strong> Log in to your Doktochain account and navigate to your Billing or Appointments section",
+        "<strong>Step 2:</strong> Locate the transaction or appointment for which you are requesting a refund",
+        "<strong>Step 3:</strong> Click \"Request Refund\" and select the reason for your request",
+        "<strong>Step 4:</strong> Provide any supporting details or documentation (e.g., screenshots of technical issues)",
+        "<strong>Step 5:</strong> Submit your request. You will receive a confirmation email with a reference number",
+        "Alternatively, you may contact our support team directly at <strong>billing@doktochain.ca</strong> or call <strong>1-800-DOKTO-CHAIN</strong>"
+      ]
+    },
+    "section5": {
+      "title": "5. Refund Processing Timeline",
+      "intro": "Once a refund is approved, the following timelines apply:",
+      "items": [
+        "<strong>Credit/debit card refunds:</strong> 5 to 10 business days to appear on your statement, depending on your bank",
+        "<strong>Provider cancellation refunds:</strong> Processed automatically within 1 business day",
+        "<strong>Subscription refunds:</strong> Processed within 3 to 5 business days after approval",
+        "<strong>Pharmacy order refunds:</strong> Processed within 5 to 7 business days after the return or issue is verified",
+        "All refunds are issued to the original payment method used for the transaction"
+      ]
+    },
+    "section6": {
+      "title": "6. Dispute Resolution",
+      "intro": "If you disagree with a refund decision, you have the following options:",
+      "items": [
+        "<strong>Internal review:</strong> Request a review of the decision by contacting our billing team at billing@doktochain.ca within 30 days of the original decision",
+        "<strong>Escalation:</strong> If the internal review does not resolve the issue, you may escalate to our Customer Experience Manager",
+        "<strong>Chargeback:</strong> You retain the right to dispute the charge with your credit card provider, though we encourage resolving disputes directly with us first to avoid delays",
+        "<strong>Consumer protection:</strong> You may also contact the applicable provincial consumer protection agency for additional guidance"
+      ]
+    },
+    "section7": {
+      "title": "7. Policy Updates",
+      "content": "Doktochain reserves the right to update this Refund Policy at any time. Material changes will be communicated through the platform and via email to registered users. Your continued use of the platform after changes take effect constitutes acceptance of the updated policy. The most current version of this Refund Policy is always available on our website."
+    },
+    "section8": {
+      "title": "8. Contact Us",
+      "intro": "For questions about this Refund Policy or to request a refund, please contact us:",
+      "items": [
+        "Email: billing@doktochain.ca",
+        "Phone: 1-800-DOKTO-CHAIN",
+        "Address: Toronto, ON, Canada"
+      ]
+    }
+  }
+}

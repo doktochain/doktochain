@@ -1,0 +1,67 @@
+{
+  "dashboard": {
+    "title": "Tableau de bord de la clinique",
+    "todayAppointments": "Rendez-vous d'aujourd'hui",
+    "totalProviders": "Total de professionnels",
+    "totalPatients": "Total de patients",
+    "revenue": "Revenus"
+  },
+  "profile": {
+    "title": "Profil de la clinique",
+    "name": "Nom de la clinique",
+    "address": "Adresse",
+    "phone": "Téléphone",
+    "email": "Courriel",
+    "hours": "Heures d'ouverture",
+    "description": "Description"
+  },
+  "providers": {
+    "title": "Professionnels",
+    "all": "Tous les professionnels",
+    "invite": "Inviter un professionnel",
+    "manage": "Gérer les professionnels"
+  },
+  "appointments": {
+    "title": "Rendez-vous",
+    "all": "Tous les rendez-vous",
+    "availability": "Définir la disponibilité",
+    "calendar": "Calendrier"
+  },
+  "services": {
+    "title": "Services",
+    "all": "Tous les services",
+    "add": "Ajouter un service",
+    "manage": "Gérer les services"
+  },
+  "specializations": {
+    "title": "Spécialisations",
+    "all": "Toutes les spécialisations",
+    "manage": "Gérer les spécialisations"
+  },
+  "patients": {
+    "title": "Patients",
+    "all": "Liste des patients",
+    "details": "Détails du patient"
+  },
+  "staff": {
+    "title": "Personnel",
+    "all": "Tout le personnel",
+    "manage": "Gérer le personnel"
+  },
+  "schedule": {
+    "title": "Horaire",
+    "manage": "Gérer l'horaire"
+  },
+  "affiliations": {
+    "title": "Affiliations",
+    "manage": "Gérer les affiliations"
+  },
+  "billing": {
+    "title": "Facturation",
+    "overview": "Aperçu de la facturation"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "general": "Paramètres généraux"
+  }
+}

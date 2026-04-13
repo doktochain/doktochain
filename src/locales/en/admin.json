@@ -1,0 +1,105 @@
+{
+  "dashboard": {
+    "title": "Admin Dashboard",
+    "totalUsers": "Total Users",
+    "totalProviders": "Total Providers",
+    "totalAppointments": "Total Appointments",
+    "totalRevenue": "Total Revenue",
+    "recentActivity": "Recent Activity",
+    "systemHealth": "System Health"
+  },
+  "users": {
+    "title": "User Management",
+    "all": "All Users",
+    "active": "Active Users",
+    "inactive": "Inactive Users",
+    "details": "User Details",
+    "editUser": "Edit User",
+    "deactivate": "Deactivate User",
+    "resetPassword": "Reset Password"
+  },
+  "providers": {
+    "title": "Provider Management",
+    "all": "All Providers",
+    "applications": "Provider Applications",
+    "approved": "Approved",
+    "pending": "Pending Review",
+    "details": "Provider Details",
+    "approve": "Approve Provider",
+    "reject": "Reject Application"
+  },
+  "clinics": {
+    "title": "Clinic Management",
+    "all": "All Clinics",
+    "applications": "Clinic Applications",
+    "details": "Clinic Details"
+  },
+  "pharmacies": {
+    "title": "Pharmacy Management",
+    "all": "All Pharmacies",
+    "pending": "Pending Approval",
+    "details": "Pharmacy Details"
+  },
+  "finance": {
+    "title": "Finance & Accounts",
+    "overview": "Financial Overview",
+    "income": "Income",
+    "expenses": "Expenses",
+    "invoices": "Invoices",
+    "payments": "Payments",
+    "transactions": "Transactions",
+    "settlements": "Settlements",
+    "refunds": "Refunds",
+    "subscriptions": "Subscriptions",
+    "billingConfig": "Billing Configuration",
+    "deliveryCosts": "Delivery Costs"
+  },
+  "reports": {
+    "title": "Reports & Analytics",
+    "all": "All Reports",
+    "income": "Income Report",
+    "expenses": "Expenses Report",
+    "profitLoss": "Profit & Loss",
+    "appointments": "Appointments Report",
+    "patients": "Patients Report",
+    "custom": "Custom Report Builder"
+  },
+  "settings": {
+    "title": "Settings",
+    "website": "Website Settings",
+    "clinic": "Clinic Settings",
+    "app": "App Settings",
+    "system": "System Settings",
+    "finance": "Finance Settings",
+    "account": "Account Settings",
+    "other": "Other Settings"
+  },
+  "cms": {
+    "title": "Content Management",
+    "pages": "Pages",
+    "blogs": "Blogs",
+    "categories": "Categories",
+    "tags": "Tags",
+    "media": "Media Library",
+    "locations": "Locations",
+    "testimonials": "Testimonials",
+    "faqs": "FAQs"
+  },
+  "interoperability": {
+    "title": "Interoperability",
+    "fhir": "FHIR Endpoints",
+    "auditTrail": "Audit Trail",
+    "provincialEhr": "Provincial EHR"
+  },
+  "permissions": {
+    "title": "Permissions & Roles",
+    "roles": "Roles",
+    "assignRole": "Assign Role",
+    "managePermissions": "Manage Permissions"
+  },
+  "activity": {
+    "title": "System Activity",
+    "logs": "Activity Logs",
+    "auditTrail": "Audit Trail"
+  }
+}

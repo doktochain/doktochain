@@ -1,0 +1,108 @@
+{
+  "dashboard": {
+    "title": "Tableau de bord professionnel",
+    "welcome": "Bienvenue, Dr {{name}}",
+    "todayAppointments": "Rendez-vous d'aujourd'hui",
+    "pendingActions": "Actions en attente",
+    "patientCount": "Total de patients",
+    "revenue": "Revenus",
+    "recentActivity": "Activité récente"
+  },
+  "appointments": {
+    "title": "Rendez-vous",
+    "calendar": "Vue calendrier",
+    "queue": "File d'attente des patients",
+    "history": "Historique",
+    "details": "Détails du rendez-vous",
+    "startConsultation": "Démarrer la consultation",
+    "markComplete": "Marquer comme terminé",
+    "noShow": "Absence",
+    "nextPatient": "Patient suivant"
+  },
+  "schedule": {
+    "title": "Mon horaire",
+    "availability": "Disponibilité",
+    "workingHours": "Heures de travail",
+    "breaks": "Pauses",
+    "timeOff": "Congés",
+    "setAvailability": "Définir la disponibilité"
+  },
+  "clinical": {
+    "title": "Clinique",
+    "documentation": "Documentation clinique",
+    "notes": "Notes cliniques",
+    "patientCharts": "Dossiers des patients",
+    "templates": "Modèles",
+    "soapNotes": "Notes SOAP",
+    "vitalSigns": "Signes vitaux"
+  },
+  "prescriptions": {
+    "title": "Ordonnances",
+    "write": "Rédiger une ordonnance",
+    "all": "Toutes les ordonnances",
+    "refillRequests": "Demandes de renouvellement",
+    "medication": "Médicament",
+    "dosage": "Posologie",
+    "instructions": "Instructions",
+    "sendToPharmacy": "Envoyer à la pharmacie"
+  },
+  "telemedicine": {
+    "title": "Télémédecine",
+    "startSession": "Démarrer la séance",
+    "waitingRoom": "Salle d'attente",
+    "sessionHistory": "Historique des séances",
+    "patientsWaiting": "Patients en attente"
+  },
+  "billing": {
+    "title": "Facturation",
+    "earnings": "Revenus",
+    "transactions": "Transactions",
+    "claims": "Réclamations d'assurance",
+    "gatewaySetup": "Configuration de paiement",
+    "totalEarnings": "Revenus totaux",
+    "pendingPayments": "Paiements en attente"
+  },
+  "messaging": {
+    "title": "Messages",
+    "inbox": "Boîte de réception",
+    "templates": "Modèles de messages",
+    "automated": "Messages automatisés",
+    "staffChat": "Clavardage du personnel"
+  },
+  "profile": {
+    "title": "Profil et paramètres",
+    "myProfile": "Mon profil",
+    "locations": "Emplacements de clinique",
+    "credentials": "Accréditations",
+    "staff": "Gestion du personnel",
+    "specialties": "Spécialités",
+    "education": "Formation et études"
+  },
+  "notifications": {
+    "title": "Notifications et préférences",
+    "emailNotifications": "Notifications par courriel",
+    "smsNotifications": "Notifications par texto",
+    "appointmentReminders": "Rappels de rendez-vous"
+  },
+  "referrals": {
+    "title": "Gestion des références",
+    "sent": "Références envoyées",
+    "received": "Références reçues",
+    "create": "Créer une référence",
+    "noReferrals": "Aucune référence trouvée",
+    "status": "Statut",
+    "urgency": "Urgence",
+    "patient": "Patient",
+    "reason": "Raison"
+  },
+  "affiliations": {
+    "title": "Affiliations de clinique",
+    "active": "Actives",
+    "pending": "En attente",
+    "request": "Demander une affiliation",
+    "noAffiliations": "Aucune affiliation trouvée",
+    "role": "Rôle",
+    "clinic": "Clinique",
+    "since": "Depuis"
+  }
+}

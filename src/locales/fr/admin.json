@@ -1,0 +1,105 @@
+{
+  "dashboard": {
+    "title": "Tableau de bord administrateur",
+    "totalUsers": "Total d'utilisateurs",
+    "totalProviders": "Total de professionnels",
+    "totalAppointments": "Total de rendez-vous",
+    "totalRevenue": "Revenus totaux",
+    "recentActivity": "Activité récente",
+    "systemHealth": "Santé du système"
+  },
+  "users": {
+    "title": "Gestion des utilisateurs",
+    "all": "Tous les utilisateurs",
+    "active": "Utilisateurs actifs",
+    "inactive": "Utilisateurs inactifs",
+    "details": "Détails de l'utilisateur",
+    "editUser": "Modifier l'utilisateur",
+    "deactivate": "Désactiver l'utilisateur",
+    "resetPassword": "Réinitialiser le mot de passe"
+  },
+  "providers": {
+    "title": "Gestion des professionnels",
+    "all": "Tous les professionnels",
+    "applications": "Demandes de professionnels",
+    "approved": "Approuvés",
+    "pending": "En attente de révision",
+    "details": "Détails du professionnel",
+    "approve": "Approuver le professionnel",
+    "reject": "Rejeter la demande"
+  },
+  "clinics": {
+    "title": "Gestion des cliniques",
+    "all": "Toutes les cliniques",
+    "applications": "Demandes de cliniques",
+    "details": "Détails de la clinique"
+  },
+  "pharmacies": {
+    "title": "Gestion des pharmacies",
+    "all": "Toutes les pharmacies",
+    "pending": "En attente d'approbation",
+    "details": "Détails de la pharmacie"
+  },
+  "finance": {
+    "title": "Finances et comptes",
+    "overview": "Aperçu financier",
+    "income": "Revenus",
+    "expenses": "Dépenses",
+    "invoices": "Factures",
+    "payments": "Paiements",
+    "transactions": "Transactions",
+    "settlements": "Règlements",
+    "refunds": "Remboursements",
+    "subscriptions": "Abonnements",
+    "billingConfig": "Configuration de facturation",
+    "deliveryCosts": "Frais de livraison"
+  },
+  "reports": {
+    "title": "Rapports et analytique",
+    "all": "Tous les rapports",
+    "income": "Rapport de revenus",
+    "expenses": "Rapport de dépenses",
+    "profitLoss": "Profits et pertes",
+    "appointments": "Rapport de rendez-vous",
+    "patients": "Rapport de patients",
+    "custom": "Générateur de rapports personnalisés"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "website": "Paramètres du site web",
+    "clinic": "Paramètres de clinique",
+    "app": "Paramètres de l'application",
+    "system": "Paramètres du système",
+    "finance": "Paramètres financiers",
+    "account": "Paramètres du compte",
+    "other": "Autres paramètres"
+  },
+  "cms": {
+    "title": "Gestion du contenu",
+    "pages": "Pages",
+    "blogs": "Blogues",
+    "categories": "Catégories",
+    "tags": "Étiquettes",
+    "media": "Médiathèque",
+    "locations": "Emplacements",
+    "testimonials": "Témoignages",
+    "faqs": "FAQ"
+  },
+  "interoperability": {
+    "title": "Interopérabilité",
+    "fhir": "Points d'accès FHIR",
+    "auditTrail": "Piste d'audit",
+    "provincialEhr": "DSÉ provincial"
+  },
+  "permissions": {
+    "title": "Permissions et rôles",
+    "roles": "Rôles",
+    "assignRole": "Assigner un rôle",
+    "managePermissions": "Gérer les permissions"
+  },
+  "activity": {
+    "title": "Activité du système",
+    "logs": "Journaux d'activité",
+    "auditTrail": "Piste d'audit"
+  }
+}

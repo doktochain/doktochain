@@ -1,0 +1,44 @@
+version: 0.2
+
+env:
+  parameter-store:
+    VITE_API_URL: /doktochain/${DEPLOY_ENV}/api-url
+    VITE_WS_URL: /doktochain/${DEPLOY_ENV}/ws-url
+    VITE_COGNITO_USER_POOL_ID: /doktochain/${DEPLOY_ENV}/cognito-user-pool-id
+    VITE_COGNITO_CLIENT_ID: /doktochain/${DEPLOY_ENV}/cognito-client-id
+    VITE_STORAGE_BUCKET: /doktochain/${DEPLOY_ENV}/storage-bucket
+    VITE_CLOUDFRONT_DOMAIN: /doktochain/${DEPLOY_ENV}/cloudfront-domain
+    VITE_AUTH_PROVIDER: /doktochain/${DEPLOY_ENV}/auth-provider
+    VITE_STRIPE_PUBLIC_KEY: /doktochain/${DEPLOY_ENV}/stripe-public-key
+    VITE_DAILY_CO_DOMAIN: /doktochain/${DEPLOY_ENV}/daily-co-domain
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+    commands:
+      - npm ci
+      - cd infrastructure && npm ci && cd ..
+
+  pre_build:
+    commands:
+      - npm run typecheck
+      - npm run test
+
+  build:
+    commands:
+      - echo "Swapping service files for AWS environment..."
+      - cp -v src/services-aws/*.ts src/services/
+      - npm run build
+      - cd infrastructure && npx cdk synth --context env=$DEPLOY_ENV && cd ..
+
+artifacts:
+  secondary-artifacts:
+    frontend:
+      files:
+        - '**/*'
+      base-directory: dist
+    infra:
+      files:
+        - '**/*'
+      base-directory: infrastructure/cdk.out

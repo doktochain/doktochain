@@ -1,0 +1,1065 @@
+{
+  "privacyPolicy": "Politique de confidentialité",
+  "termsOfService": "Conditions d'utilisation",
+  "cookiePolicy": "Politique de témoins",
+  "hipaaCompliance": "Conformité HIPAA",
+  "securityWhitepaper": "Livre blanc sur la sécurité",
+  "refundPolicy": "Politique de remboursement",
+  "accessibility": "Accessibilité",
+  "lastUpdated": "Dernière mise à jour : {{date}}",
+  "tableOfContents": "Table des matières",
+  "backToTop": "Retour en haut",
+  "home": "Accueil",
+  "sidebarLabel": "Juridique",
+  "sidebar": {
+    "privacy": "Politique de confidentialité",
+    "terms": "Conditions d'utilisation",
+    "cookies": "Politique de témoins",
+    "hipaa": "Conformité HIPAA",
+    "security": "Livre blanc sur la sécurité",
+    "accessibility": "Accessibilité",
+    "refund": "Politique de remboursement"
+  },
+  "security": {
+    "executiveSummary": {
+      "title": "Résumé exécutif",
+      "content": "Doktochain se positionne à l'avant-garde de la sécurité des données de santé, en mettant en œuvre des pistes d'audit cryptographiques, des mécanismes de consentement appliqués au niveau de la base de données et des normes de chiffrement de pointe. Ce livre blanc détaille notre architecture technique conçue pour répondre et dépasser les exigences réglementaires canadiennes en matière de soins de santé tout en fournissant des preuves vérifiables de l'intégrité des données et du contrôle d'accès."
+    },
+    "section1": {
+      "title": "1. Pistes d'audit cryptographiques",
+      "intro": "Chaque action significative sur la plateforme Doktochain est enregistrée dans une piste d'audit immuable et inviolable, alimentée par le hachage cryptographique. Cela garantit qu'aucun accès ou modification de données ne peut se produire sans preuve permanente et vérifiable.",
+      "hashChain": {
+        "title": "1.1 Architecture de chaîne de hachage SHA-256",
+        "intro": "Notre système d'audit maintient une chaîne de hachage où chaque nouvelle entrée incorpore le hachage cryptographique de l'entrée précédente. Cela crée une séquence mathématiquement liée où la modification de tout enregistrement historique invaliderait toutes les entrées suivantes, rendant la falsification immédiatement détectable.",
+        "hashFunction": "<strong>Fonction de hachage :</strong> SHA-256 (hachage cryptographique 256 bits)",
+        "chainFormat": "<strong>Format de chaîne :</strong> Chaque entrée d'audit comprend : type d'action, ID utilisateur, ID ressource, horodatage (UTC), raison d'accès et hachage de l'entrée précédente",
+        "immutability": "<strong>Immuabilité :</strong> Une fois écrits, les enregistrements d'audit sont en ajout seulement; aucune modification ou suppression n'est autorisée",
+        "verification": "<strong>Vérification :</strong> Tout tiers peut vérifier l'intégrité de la chaîne entière en recalculant les hachages"
+      },
+      "coverage": {
+        "title": "1.2 Couverture de la piste d'audit",
+        "intro": "Les actions suivantes sont enregistrées de manière permanente dans la piste d'audit :",
+        "items": [
+          "Tous les événements d'authentification des utilisateurs (connexion, déconnexion, modifications de mot de passe)",
+          "Accès aux dossiers de santé des patients (qui a consulté quoi, quand et pourquoi)",
+          "Modifications des données cliniques (prescriptions rédigées, diagnostics enregistrés, notes mises à jour)",
+          "Octrois et révocations de consentement (avec fenêtres de validité temporelles)",
+          "Accès aux données inter-locataires (fournisseur à patient, pharmacie à prescription)",
+          "Événements d'exportation et de partage (téléchargements PDF, transferts d'enregistrements, exportations FHIR)",
+          "Actions administratives (création d'utilisateur, affectations de rôles, modifications de politiques)"
+        ]
+      },
+      "patientAccess": {
+        "title": "1.3 Accès à la piste d'audit du patient",
+        "content": "Les patients maintiennent une visibilité continue et en temps réel de leur piste d'audit. La plateforme fournit un journal horodaté montrant exactement qui a accédé à leurs dossiers, quand l'accès s'est produit et la raison de l'accès (sous quelle autorisation de consentement). Cette transparence renforce la confiance et fournit une responsabilité juridique."
+      }
+    },
+    "section2": {
+      "title": "2. Chiffrement de niveau bancaire",
+      "intro": "Doktochain utilise des normes de chiffrement équivalentes à celles des institutions financières, protégeant les données en transit et au repos. Cette approche à plusieurs niveaux garantit que même dans l'éventualité improbable d'une compromission de la base de données, les informations personnelles de santé restent illisibles sans les clés de déchiffrement appropriées.",
+      "inTransit": {
+        "title": "2.1 Chiffrement en transit",
+        "protocol": "<strong>Protocole :</strong> TLS 1.3 (minimum) pour toutes les communications réseau",
+        "certificate": "<strong>Certificat :</strong> Certificats valides signés par une AC sur tous les points de terminaison",
+        "cipherSuites": "<strong>Suites de chiffrement :</strong> Uniquement des suites de chiffrement modernes et cryptographiquement sécurisées (pas d'algorithmes hérités)",
+        "forwardSecrecy": "<strong>Secret parfait :</strong> Les clés de session sont éphémères; même si les clés à long terme sont compromises, les sessions passées restent sécurisées",
+        "hsts": "<strong>HSTS :</strong> HTTP Strict Transport Security appliqué pour empêcher les attaques de rétrogradation"
+      },
+      "atRest": {
+        "title": "2.2 Chiffrement au repos",
+        "algorithm": "<strong>Algorithme :</strong> AES-256 (Advanced Encryption Standard 256 bits)",
+        "mode": "<strong>Mode :</strong> GCM (Galois/Counter Mode) pour le chiffrement authentifié",
+        "keyManagement": "<strong>Gestion des clés :</strong> Les clés sont stockées séparément des données chiffrées, protégées par des modules de sécurité matériels (HSM) le cas échéant",
+        "database": "<strong>Chiffrement de la base de données :</strong> Toutes les tables PostgreSQL contenant des RPS utilisent le chiffrement transparent des données (TDE)",
+        "fileStorage": "<strong>Stockage de fichiers :</strong> Documents, images et pièces jointes des patients stockés dans des compartiments cloud chiffrés avec des clés de chiffrement par objet"
+      },
+      "keyRotation": {
+        "title": "2.3 Politique de rotation des clés",
+        "content": "Les clés de chiffrement sont renouvelées annuellement ou en cas de compromission de clé. Les anciennes clés sont conservées dans un stockage sécurisé hors ligne pendant un minimum de 7 ans pour répondre aux exigences d'audit et au déchiffrement des enregistrements historiques."
+      }
+    },
+    "section3": {
+      "title": "3. Application de la sécurité au niveau des lignes (RLS)",
+      "intro": "L'aspect le plus puissant du modèle de sécurité de Doktochain est la sécurité au niveau des lignes appliquée par la base de données. Contrairement au contrôle d'accès au niveau de l'application qui peut potentiellement être contourné par des vulnérabilités de code, les politiques RLS sont appliquées par le moteur de base de données lui-même, rendant l'accès non autorisé impossible même si la sécurité de l'application est compromise.",
+      "howItWorks": {
+        "title": "3.1 Comment fonctionne RLS",
+        "intro": "Chaque requête à la base de données est automatiquement filtrée par les politiques RLS avant que les résultats ne soient renvoyés. Les utilisateurs ne peuvent voir que les lignes qu'ils sont explicitement autorisés à voir, en fonction de :",
+        "userIdentity": "<strong>Identité de l'utilisateur :</strong> L'identifiant, le rôle et les affiliations organisationnelles de l'utilisateur authentifié",
+        "ownership": "<strong>Règles de propriété :</strong> Les utilisateurs peuvent accéder à leurs propres enregistrements; les fournisseurs peuvent accéder aux dossiers des patients uniquement avec un consentement actif",
+        "consentState": "<strong>État du consentement :</strong> Les politiques de base de données vérifient en temps réel si une autorisation de consentement valide existe, y compris l'expiration temporelle",
+        "organizational": "<strong>Appartenance organisationnelle :</strong> Le personnel de la clinique ne peut accéder qu'aux dossiers des cliniques auxquelles il est affilié"
+      },
+      "consentBased": {
+        "title": "3.2 Contrôle d'accès basé sur le consentement",
+        "intro": "Les politiques RLS appliquent activement le modèle de consentement Doktochain. Chaque accès aux données inter-frontières (par exemple, un fournisseur consultant les dossiers de santé d'un patient) est vérifié par rapport à :",
+        "existence": "<strong>Existence du consentement :</strong> Existe-t-il une autorisation de consentement active et non expirée du patient ?",
+        "scope": "<strong>Vérification de la portée :</strong> Le consentement couvre-t-il les données spécifiques auxquelles on accède ?",
+        "timeWindow": "<strong>Fenêtre temporelle :</strong> Le consentement est-il toujours dans sa période de validité ?",
+        "revocation": "<strong>Statut de révocation :</strong> Le patient a-t-il révoqué ce consentement ?",
+        "failure": "Si l'une des vérifications échoue, la base de données renvoie zéro ligne—les données sont littéralement invisibles pour l'utilisateur demandeur, quel que soit son rôle ou ses privilèges."
+      },
+      "examples": {
+        "title": "3.3 Exemples de politiques RLS",
+        "intro": "Un exemple simplifié de la façon dont les politiques RLS protègent les dossiers de santé des patients :",
+        "patientSelf": "<strong>Accès auto-patient :</strong> SELECT autorisé si user_id = auth.uid()",
+        "provider": "<strong>Accès fournisseur :</strong> SELECT autorisé si patient_id a accordé un consentement actif et non expiré au fournisseur",
+        "pharmacy": "<strong>Accès pharmacie :</strong> Données de prescription SELECT si le consentement accorde explicitement la visibilité de la pharmacie ET la prescription est attribuée à cette pharmacie",
+        "admin": "<strong>Accès administrateur :</strong> Soumis à l'appartenance organisationnelle (le personnel de la clinique accède uniquement aux dossiers de la clinique, les administrateurs de la plateforme accèdent à tous)"
+      }
+    },
+    "section4": {
+      "title": "4. Principes d'architecture à connaissance nulle",
+      "intro": "Doktochain applique des principes à connaissance nulle aux opérations sensibles, garantissant qu'aucune partie (y compris le personnel de Doktochain) ne peut accéder aux données utilisateur sans autorisation explicite et enregistrement de la piste d'audit.",
+      "dataMinimization": {
+        "title": "4.1 Minimisation des données",
+        "items": [
+          "Seules les données de santé nécessaires aux soins directs des patients sont collectées",
+          "Aucune donnée n'est conservée plus longtemps que légalement requis",
+          "Les utilisateurs peuvent demander la suppression des données (sous réserve des politiques de conservation)",
+          "Les données de sauvegarde sont chiffrées et stockées dans des installations isolées et sécurisées"
+        ]
+      },
+      "consentPrimitive": {
+        "title": "4.2 Le consentement comme primitive de première classe",
+        "intro": "Le consentement n'est pas une réflexion après coup dans Doktochain—c'est une primitive fondamentale appliquée par la base de données. Aucun accès aux données ne se produit sans consentement explicite, et chaque autorisation de consentement comprend :",
+        "items": [
+          "Déclaration claire des données partagées",
+          "Objectif explicite d'accès (par exemple, « traiter la condition du patient », « remplir la prescription »)",
+          "Fenêtre de validité limitée dans le temps (expire automatiquement sauf renouvellement)",
+          "Portée granulaire (par exemple, « historique des médicaments uniquement », « dossier de santé complet »)",
+          "Capacité de révocation initiée par le patient à tout moment"
+        ]
+      },
+      "staffRestrictions": {
+        "title": "4.3 Restrictions d'accès aux données du personnel",
+        "intro": "Même le personnel de Doktochain ne peut pas consulter les données des patients. L'accès au support est :",
+        "items": [
+          "Explicitement enregistré dans la piste d'audit",
+          "Limité dans le temps (expire automatiquement après la session)",
+          "Approuvé par l'équipe de sécurité avant l'octroi",
+          "Visible pour le patient dans sa piste d'audit"
+        ]
+      }
+    },
+    "section5": {
+      "title": "5. Système de gestion du consentement",
+      "intro": "La couche de consentement est la pierre angulaire de la protection de la vie privée de Doktochain. Elle équilibre les besoins d'interopérabilité des soins de santé avec la vie privée des patients grâce à des fenêtres de consentement intelligentes et limitées dans le temps.",
+      "types": {
+        "title": "5.1 Types de consentement",
+        "directCare": "<strong>Consentement de soins directs :</strong> Le patient accorde au fournisseur l'accès pour traiter une condition spécifique; valide pour la période de rendez-vous plus 30 jours pour la documentation de suivi",
+        "prescription": "<strong>Consentement de pharmacie pour prescription :</strong> Le patient dirige explicitement une prescription vers une pharmacie; la pharmacie ne peut accéder qu'à cette prescription et aux données démographiques connexes du patient",
+        "healthRecord": "<strong>Partage de dossier de santé :</strong> Le patient accorde à un autre fournisseur l'accès à l'historique de santé complet ou partiel pour la continuité des soins; généralement 90 jours",
+        "research": "<strong>Consentement de recherche/agrégat :</strong> Le patient autorise l'utilisation de données désidentifiées pour l'analyse de la plateforme (facultatif, non requis pour le service)"
+      },
+      "timeBound": {
+        "title": "5.2 Fenêtres limitées dans le temps",
+        "intro": "Toutes les autorisations de consentement incluent des délais d'expiration automatiques. Après l'expiration, l'accès est révoqué automatiquement sans action supplémentaire de l'utilisateur. Cela empêche l'accès indéfini aux données et encourage des conversations de reconsentement périodiques.",
+        "directCare": "Accès aux soins directs : Expire 30 jours après la dernière interaction de rendez-vous",
+        "prescription": "Accès à la prescription : Expire lorsque la prescription est marquée comme remplie ou 60 jours, selon la première éventualité",
+        "healthRecord": "Partage de dossier de santé : Expire après 90 jours sauf renouvellement explicite",
+        "emergency": "Accès d'urgence : Expire après 24 heures (pour les situations mettant la vie en danger)"
+      },
+      "revocation": {
+        "title": "5.3 Révocation et modification",
+        "intro": "Les patients peuvent révoquer tout consentement à tout moment via leur tableau de bord. Lors de la révocation :",
+        "items": [
+          "L'accès est immédiatement interrompu (en quelques millisecondes, appliqué par la base de données RLS)",
+          "Un événement de révocation est enregistré dans la piste d'audit immuable",
+          "L'utilisateur révocateur reçoit une confirmation",
+          "Le fournisseur concerné est informé (pour empêcher l'utilisation de données en cache obsolètes)"
+        ]
+      }
+    },
+    "section6": {
+      "title": "6. Cadre de conformité réglementaire",
+      "intro": "Doktochain est conçu pour se conformer à toutes les réglementations canadiennes sur la confidentialité des soins de santé et aux normes internationales sur les données de santé.",
+      "pipeda": {
+        "title": "6.1 Conformité LPRPDE (fédéral)",
+        "intro": "La Loi sur la protection des renseignements personnels et les documents électroniques (LPRPDE) régit le traitement des données du secteur privé :",
+        "accountability": "<strong>Responsabilité :</strong> Un responsable de la protection de la vie privée désigné supervise la conformité; politiques documentées et auditables",
+        "purpose": "<strong>Identification de l'objectif :</strong> Les utilisateurs sont informés des objectifs de collecte de données avant de fournir des informations",
+        "consent": "<strong>Consentement :</strong> Consentement significatif obtenu; les utilisateurs peuvent refuser la collecte de données non essentielles",
+        "limiting": "<strong>Limitation de la collecte :</strong> Seules les données nécessaires sont collectées; pas de profilage commercial",
+        "useLimitation": "<strong>Limitation d'utilisation :</strong> Les données sont utilisées uniquement aux fins déclarées ou avec un nouveau consentement explicite",
+        "accuracy": "<strong>Exactitude :</strong> Les données sont maintenues exactes et à jour; les utilisateurs peuvent demander des corrections",
+        "safeguards": "<strong>Garanties :</strong> Mesures de sécurité appropriées (chiffrement, contrôles d'accès, pistes d'audit)",
+        "openness": "<strong>Transparence :</strong> Politiques de confidentialité transparentes et accessibles",
+        "individualAccess": "<strong>Accès individuel :</strong> Les utilisateurs peuvent demander et consulter leurs renseignements personnels",
+        "complaints": "<strong>Procédures de plainte :</strong> Processus clair pour signaler les préoccupations en matière de confidentialité"
+      },
+      "provincial": {
+        "title": "6.2 Lois provinciales sur la protection de la vie privée en matière de santé",
+        "intro": "En plus de la LPRPDE, Doktochain se conforme aux lois provinciales spécifiques à la santé :",
+        "ontario": "<strong>Ontario (LPRPS) :</strong> Loi sur la protection des renseignements personnels sur la santé — régit le traitement des informations de santé par les fournisseurs et établissements de soins de santé",
+        "alberta": "<strong>Alberta (HIA) :</strong> Loi sur l'information sur la santé — fournit une protection de la vie privée pour les renseignements personnels sur la santé",
+        "bc": "<strong>Colombie-Britannique (PIPA) :</strong> Loi sur la protection des renseignements personnels — s'applique aux organismes de santé du secteur privé",
+        "quebec": "<strong>Québec (Loi 25) :</strong> Loi sur la confidentialité mise à jour avec des exigences plus strictes en matière de consentement et de sécurité",
+        "other": "<strong>Manitoba, Saskatchewan, Nouvelle-Écosse :</strong> Législation provinciale similaire sur la protection de la vie privée applicable dans les juridictions respectives"
+      },
+      "hipaa": {
+        "title": "6.3 Alignement HIPAA (réciprocité américaine)",
+        "intro": "Bien que non requis pour les opérations canadiennes, Doktochain dépasse les normes HIPAA pour soutenir les partenariats de soins de santé transfrontaliers :",
+        "items": [
+          "Règle de confidentialité : Norme minimale nécessaire appliquée",
+          "Règle de sécurité : Les garanties techniques dépassent les exigences (AES-256 par rapport au chiffrement requis)",
+          "Notification de violation : Notification obligatoire de 60 jours pour tout accès non autorisé"
+        ]
+      },
+      "fhir": {
+        "title": "6.4 Conformité FHIR R4",
+        "intro": "La couche de données cliniques de Doktochain est conçue autour des normes FHIR (Fast Healthcare Interoperability Resources) R4, permettant un échange de données transparent avec les DSE externes et les systèmes provinciaux :",
+        "resources": "<strong>Ressources prises en charge :</strong> Patient, Observation, Condition, Procedure, MedicationRequest, Immunization, AllergyIntolerance, Encounter, DiagnosticReport",
+        "coding": "<strong>Systèmes de codage :</strong> CIM-10 (diagnostics/conditions), SNOMED CT (concepts cliniques), CPT (procédures), LOINC (résultats de laboratoire), DIN (médicaments)",
+        "validation": "<strong>Validation :</strong> Toutes les données cliniques validées par rapport au schéma FHIR avant le stockage",
+        "export": "<strong>Exportation :</strong> Les patients peuvent exporter leur dossier de santé complet dans des ensembles FHIR standard"
+      }
+    },
+    "section7": {
+      "title": "7. Résidence des données et sécurité de l'infrastructure",
+      "intro": "Toutes les données des patients sont stockées et traitées au Canada sur une infrastructure cloud dédiée et gérée en privé. Cette architecture offre un contrôle total sur l'isolement du réseau, la gestion des clés de chiffrement et les politiques d'accès tout en se conformant aux exigences canadiennes de résidence des données.",
+      "hosting": {
+        "title": "7.1 Hébergement des données canadiennes",
+        "primary": "<strong>Région principale :</strong> Montréal, Québec (ca-central-1) — toutes les ressources de calcul, de base de données et de stockage déployées exclusivement dans les centres de données canadiens",
+        "dr": "<strong>Région de reprise après sinistre :</strong> Calgary, Alberta (ca-west-1) — réplication inter-régions pour la continuité des activités",
+        "geographic": "<strong>Restriction géographique :</strong> Les données ne quittent jamais la juridiction canadienne sans consentement explicite de l'utilisateur; les politiques d'infrastructure appliquent le déploiement verrouillé par région",
+        "iac": "<strong>Infrastructure as Code :</strong> Toutes les ressources cloud sont définies de manière déclarative, permettant des déploiements reproductibles et des modifications d'infrastructure auditables"
+      },
+      "network": {
+        "title": "7.2 Sécurité et isolement du réseau",
+        "intro": "La plateforme fonctionne dans une architecture de réseau virtuel privé conçue pour minimiser la surface d'attaque et empêcher l'accès non autorisé aux systèmes sensibles.",
+        "private": "<strong>Architecture de réseau privé :</strong> Les ressources de base de données et de calcul fonctionnent dans des sous-réseaux privés sans accès Internet direct et sans adresses IP publiques",
+        "outbound": "<strong>Accès Internet sortant uniquement :</strong> Les ressources privées atteignent les services externes (par exemple, processeurs de paiement) via une passerelle de traduction d'adresses réseau — aucune connexion entrante n'est possible",
+        "pooling": "<strong>Proxy de regroupement de connexions :</strong> Une couche de proxy gérée se situe entre les fonctions de calcul et la base de données, appliquant les limites de connexion, le chiffrement TLS et la rotation des informations d'identification sans exposer le point de terminaison de la base de données",
+        "entry": "<strong>Point d'entrée public unique :</strong> Tout le trafic API entre par une passerelle API gérée qui valide les jetons d'authentification avant que toute demande n'atteigne les services backend",
+        "cdn": "<strong>Réseau de diffusion de contenu :</strong> Les actifs statiques et les ressources frontales sont servis via un CDN mondial avec des règles de pare-feu d'application Web (WAF) pour la protection DDoS et le filtrage des demandes",
+        "securityGroups": "<strong>Groupes de sécurité :</strong> Les règles de pare-feu granulaires limitent l'accès à la base de données uniquement aux fonctions de calcul autorisées — aucun autre service ou utilisateur ne peut initier de connexions"
+      },
+      "keyManagement": {
+        "title": "7.3 Gestion des clés et infrastructure de chiffrement",
+        "intro": "Les clés de chiffrement sont gérées via un service de gestion des clés dédié et soutenu par du matériel qui applique la séparation des tâches entre les administrateurs de clés et les utilisateurs de données.",
+        "hsm": "<strong>Modules de sécurité matériels :</strong> Toutes les clés de chiffrement principales sont générées et stockées dans des modules de sécurité matériels validés FIPS 140-2 niveau 3",
+        "database": "<strong>Chiffrement de base de données :</strong> La base de données PostgreSQL gérée utilise le chiffrement transparent des données avec des clés dédiées automatiquement renouvelées",
+        "fileStorage": "<strong>Chiffrement du stockage de fichiers :</strong> Les documents et pièces jointes des patients utilisent le chiffrement côté serveur avec des clés par objet dérivées des clés principales",
+        "secrets": "<strong>Gestion des secrets :</strong> Les informations d'identification de tiers (clés de processeur de paiement, jetons de consultation vidéo) sont stockées dans un coffre-fort de secrets géré avec support de rotation automatique",
+        "rotation": "<strong>Rotation des clés :</strong> Les clés principales sont renouvelées annuellement; les clés de données sont renouvelées à chaque opération d'écriture; les anciennes clés sont conservées en toute sécurité pour le déchiffrement historique"
+      },
+      "monitoring": {
+        "title": "7.4 Infrastructure d'audit et de surveillance",
+        "intro": "Au-delà de la piste d'audit cryptographique au niveau de l'application (Section 1), l'infrastructure elle-même maintient une journalisation et une surveillance complètes à chaque couche.",
+        "apiLogging": "<strong>Journalisation de l'activité API :</strong> Chaque appel d'API cloud sur le compte est enregistré avec l'identité de l'appelant, l'horodatage, l'IP source et les paramètres de demande — conservés pendant 90 jours minimum",
+        "realtime": "<strong>Surveillance en temps réel :</strong> Les tableaux de bord personnalisés et les alarmes automatisées surveillent les performances de la base de données, les taux d'erreur de l'API, les échecs d'authentification et l'utilisation des ressources",
+        "flowLogs": "<strong>Journaux de flux réseau :</strong> Tout le trafic réseau au sein du réseau virtuel privé est enregistré pour l'analyse médico-légale et la détection d'anomalies",
+        "ledger": "<strong>Amélioration du grand livre immuable :</strong> Comme couche supplémentaire d'assurance, les événements d'audit critiques peuvent être répliqués vers une base de données de grand livre immuable spécialement conçue qui fournit une vérification cryptographique de l'intégrité des données, complétant la piste d'audit de chaîne de hachage au niveau de l'application",
+        "alerting": "<strong>Alerte :</strong> Les alertes automatisées informent l'équipe de sécurité des modèles suspects, y compris les échecs d'authentification répétés, les volumes d'accès aux données inhabituels et les modifications de configuration de l'infrastructure"
+      },
+      "disaster": {
+        "title": "7.5 Reprise après sinistre et continuité des activités",
+        "rpo": "<strong>RPO (objectif de point de récupération) :</strong> 1 heure — perte de données maximale en cas de sinistre",
+        "rto": "<strong>RTO (objectif de temps de récupération) :</strong> 15 minutes — plateforme à nouveau disponible après basculement",
+        "backup": "<strong>Sauvegarde continue :</strong> La base de données PostgreSQL gérée effectue des sauvegardes continues avec récupération à un instant donné à n'importe quelle seconde dans la fenêtre de conservation",
+        "multiAz": "<strong>Redondance multi-AZ :</strong> Les ressources de base de données et de calcul sont déployées dans plusieurs zones de disponibilité au sein de la région principale; un basculement automatique se produit si une zone devient indisponible",
+        "crossRegion": "<strong>Réplication inter-régions :</strong> Les données critiques sont répliquées vers la région de reprise après sinistre pour la redondance géographique",
+        "reproducibility": "<strong>Reproductibilité de l'infrastructure :</strong> Toutes les ressources sont définies en tant que code, permettant la reconstruction complète de l'environnement dans une nouvelle région en quelques heures en cas de défaillance régionale catastrophique",
+        "testing": "<strong>Tests :</strong> Exercices de reprise après sinistre effectués trimestriellement; procédures de basculement testées et documentées"
+      },
+      "soc2": {
+        "title": "7.6 Certification SOC 2 Type II",
+        "intro": "Doktochain subit des audits SOC 2 Type II annuels par des auditeurs tiers indépendants, validant :",
+        "items": [
+          "Les contrôles de sécurité sont conçus et fonctionnent efficacement",
+          "Disponibilité et intégrité du traitement des systèmes",
+          "Confidentialité des informations du patient",
+          "Les contrôles de confidentialité sont conformes aux normes LPRPDE et provinciales"
+        ]
+      }
+    },
+    "section8": {
+      "title": "8. Interopérabilité et confiance inter-systèmes",
+      "intro": "L'une des forces de Doktochain est de permettre le partage sécurisé des données de santé avec des systèmes externes tout en maintenant une responsabilité d'audit complète.",
+      "fhirGateway": {
+        "title": "8.1 Architecture de passerelle FHIR",
+        "intro": "Doktochain exploite une passerelle FHIR qui permet aux DSE externes et aux systèmes de santé provinciaux de demander des dossiers de patients. Toutes les demandes passent par le même pipeline de sécurité :",
+        "items": [
+          "La demande comprend l'ID du patient et les informations d'identification OAuth du système demandeur",
+          "La passerelle vérifie si le patient a accordé le consentement au système demandeur",
+          "Si le consentement est actif et temporellement valide, le paquet FHIR du patient est renvoyé (chiffré)",
+          "La demande est enregistrée dans la piste d'audit immuable avec l'identité du système et l'horodatage",
+          "Le patient voit la demande dans sa piste d'audit immédiatement"
+        ]
+      },
+      "provincial": {
+        "title": "8.2 Connexions DSE provinciaux (BIENTÔT DISPONIBLE...)",
+        "intro": "Doktochain s'intègre aux échanges d'informations de santé provinciaux là où ils sont disponibles :",
+        "ontario": "<strong>Ontario :</strong> Connegta (portail provincial d'information sur la santé)",
+        "alberta": "<strong>Alberta :</strong> Access 24/7 (système de dossier de santé provincial)",
+        "bc": "<strong>Colombie-Britannique :</strong> Connexions pilotes Health Information Exchange (HIE)",
+        "note": "Ces intégrations sont en lecture seule; les données des patients ne sont jamais poussées sans consentement explicite, et chaque lecture est auditée."
+      },
+      "prescription": {
+        "title": "8.3 Audit du flux de travail de prescription",
+        "intro": "Le pipeline de prescription illustre une couverture d'audit complète :",
+        "items": [
+          "Le fournisseur rédige une prescription → entrée d'audit créée avec l'identité du fournisseur et la raison",
+          "Le patient reçoit une notification → réception enregistrée",
+          "Le patient dirige vers une pharmacie spécifique → décision de redirection enregistrée avec horodatage",
+          "La pharmacie reçoit la prescription → accès enregistré avec l'identité de la pharmacie",
+          "La pharmacie remplit ou refuse → décision d'exécution enregistrée",
+          "Le patient consulte le statut rempli → accès enregistré",
+          "Toutes les actions enregistrées dans la chaîne de hachage immuable; toute partie peut vérifier l'intégrité de manière indépendante"
+        ]
+      }
+    },
+    "section9": {
+      "title": "9. Tests de sécurité et intervention en cas d'incident",
+      "penetration": {
+        "title": "9.1 Tests de pénétration",
+        "intro": "Doktochain subit des tests de pénétration trimestriels par des sociétés de sécurité indépendantes. Les tests couvrent :",
+        "items": [
+          "Attaques de couche réseau (analyse de port, exploits de protocole)",
+          "Attaques de couche application (injection SQL, XSS, CSRF)",
+          "Tentatives de contournement d'authentification/autorisation",
+          "Faiblesses de l'algorithme de chiffrement et de la mise en œuvre",
+          "Tentatives de contournement de la politique RLS",
+          "Scénarios de falsification de la piste d'audit"
+        ]
+      },
+      "codeReview": {
+        "title": "9.2 Revue de code de sécurité",
+        "content": "Toutes les modifications de code font l'objet d'une révision axée sur la sécurité avant le déploiement. L'analyse automatisée détecte les vulnérabilités connues; les ingénieurs seniors vérifient qu'aucun nouveau problème de sécurité n'est introduit."
+      },
+      "incident": {
+        "title": "9.3 Plan d'intervention en cas d'incident",
+        "intro": "En cas d'incident de sécurité :",
+        "detection": "<strong>Détection :</strong> Surveillance 24h/24 et 7j/7 des journaux, systèmes de détection d'intrusion et alertes d'audit",
+        "response": "<strong>Réponse :</strong> Équipe d'intervention en cas d'incident activée en 15 minutes; systèmes affectés isolés",
+        "investigation": "<strong>Enquête :</strong> Analyse médico-légale utilisant la piste d'audit immuable; déterminer la portée et la cause",
+        "notification": "<strong>Notification :</strong> Utilisateurs et régulateurs affectés informés dans les 72 heures (selon LPRPDE)",
+        "remediation": "<strong>Remédiation :</strong> Correctifs déployés; améliorations de sécurité mises en œuvre pour empêcher la récurrence"
+      }
+    },
+    "section10": {
+      "title": "10. Spécifications techniques et référence des normes",
+      "cryptographic": {
+        "title": "10.1 Normes cryptographiques",
+        "tableHeaders": {
+          "component": "Composant",
+          "standard": "Norme",
+          "details": "Détails"
+        },
+        "rows": [
+          {
+            "component": "Algorithme de hachage",
+            "standard": "SHA-256",
+            "details": "NIST FIPS 180-4; sortie 256 bits"
+          },
+          {
+            "component": "Chiffrement (au repos)",
+            "standard": "AES-256-GCM",
+            "details": "NIST FIPS 197; chiffrement authentifié"
+          },
+          {
+            "component": "Chiffrement (en transit)",
+            "standard": "TLS 1.3",
+            "details": "RFC 8446; secret parfait appliqué"
+          },
+          {
+            "component": "Échange de clés",
+            "standard": "ECDHE",
+            "details": "Diffie-Hellman éphémère à courbe elliptique"
+          },
+          {
+            "component": "Authentification de message",
+            "standard": "HMAC-SHA256",
+            "details": "Vérification de l'intégrité"
+          },
+          {
+            "component": "Gestion des clés",
+            "standard": "KMS soutenu par HSM",
+            "details": "FIPS 140-2 niveau 3; rotation annuelle automatique"
+          },
+          {
+            "component": "Isolement réseau",
+            "standard": "VPC privé",
+            "details": "Sous-réseaux privés; pas de points de terminaison de base de données publics"
+          },
+          {
+            "component": "Infrastructure d'audit",
+            "standard": "Journalisation de l'activité API + grand livre immuable",
+            "details": "Journalisation complète des appels API; grand livre cryptographique optionnel"
+          }
+        ]
+      },
+      "regulatory": {
+        "title": "10.2 Références réglementaires",
+        "items": [
+          "LPRPDE (Loi sur la protection des renseignements personnels et les documents électroniques) — L.C. 1998, ch. 5",
+          "LPRPS (Loi de l'Ontario sur la protection des renseignements personnels sur la santé) — L.O. 2004, ch. 3",
+          "HIA (Loi de l'Alberta sur l'information sur la santé) — RSA 2000, ch. H-5",
+          "PIPA (Loi de la C.-B. sur la protection des renseignements personnels) — S.B.C. 2003, ch. 63",
+          "FHIR R4 — https://www.hl7.org/fhir/R4/",
+          "SOC 2 Type II — Critères de services de confiance AICPA"
+        ]
+      }
+    },
+    "commitment": {
+      "title": "Engagement envers la transparence",
+      "content": "Le modèle de sécurité de Doktochain est conçu pour la transparence et l'autonomisation des patients. Les patients peuvent consulter leur piste d'audit complète, révoquer le consentement à tout moment et vérifier indépendamment l'intégrité des données. Nous croyons que la confiance dans la technologie des soins de santé se construit non pas par le théâtre de la sécurité, mais par des systèmes vérifiables et auditables. Ce livre blanc est disponible pour les établissements de santé, les régulateurs et les patients pour évaluation et vérification indépendante."
+    }
+  },
+  "privacy": {
+    "intro1": "Doktochain Inc. (« Doktochain », « nous », « notre » ou « nos ») s'engage à protéger la confidentialité et la sécurité des renseignements personnels, y compris les renseignements personnels sur la santé (RPS), recueillis par l'intermédiaire de notre plateforme. Cette politique de confidentialité décrit comment nous recueillons, utilisons, divulguons et protégeons vos informations lorsque vous utilisez la plateforme Doktochain, le site Web et les services connexes.",
+    "intro2": "Nous fonctionnons conformément à la Loi sur la protection des renseignements personnels et les documents électroniques (LPRPDE) et aux lois provinciales applicables en matière de protection de la vie privée en matière de santé, notamment la Loi sur la protection des renseignements personnels sur la santé (LPRPS) de l'Ontario, la Loi sur l'information sur la santé (HIA) de l'Alberta et la Loi sur la protection des renseignements personnels (PIPA) de la Colombie-Britannique.",
+    "section2": {
+      "title": "2. Informations que nous recueillons",
+      "personal": {
+        "title": "2.1 Renseignements personnels",
+        "intro": "Nous pouvons recueillir les types de renseignements personnels suivants :",
+        "items": [
+          "Nom complet, date de naissance, sexe et coordonnées (courriel, téléphone, adresse)",
+          "Numéros d'identification émis par le gouvernement (numéros de carte santé) pour la vérification de l'assurance",
+          "Informations d'identification du compte et données d'authentification",
+          "Informations de paiement et de facturation",
+          "Informations d'identification professionnelle et de permis (pour les prestataires de soins de santé)"
+        ]
+      },
+      "health": {
+        "title": "2.2 Renseignements personnels sur la santé",
+        "intro": "Lorsque vous utilisez nos services de santé, nous pouvons recueillir :",
+        "items": [
+          "Antécédents médicaux, diagnostics et dossiers de traitement",
+          "Informations sur les prescriptions et les médicaments",
+          "Résultats de laboratoire, rapports d'imagerie et notes cliniques",
+          "Dossiers d'allergies et de vaccination",
+          "Signes vitaux et données de suivi de la santé",
+          "Enregistrements de consultations de télémédecine (avec consentement)"
+        ]
+      },
+      "technical": {
+        "title": "2.3 Informations techniques",
+        "items": [
+          "Type d'appareil, système d'exploitation et informations sur le navigateur",
+          "Adresse IP et données de localisation approximative",
+          "Modèles d'utilisation et données d'interaction au sein de la plateforme",
+          "Témoins et technologies de suivi similaires"
+        ]
+      }
+    },
+    "section3": {
+      "title": "3. Comment nous utilisons vos informations",
+      "intro": "Nous utilisons les informations que nous recueillons pour :",
+      "items": [
+        "Fournir, maintenir et améliorer nos services de plateforme de soins de santé",
+        "Faciliter les rendez-vous, les consultations et la gestion des prescriptions",
+        "Traiter les paiements et gérer la facturation",
+        "Communiquer avec vous au sujet des rendez-vous, des prescriptions et des questions de compte",
+        "Assurer la sécurité et l'intégrité de notre plateforme",
+        "Se conformer aux obligations légales et réglementaires",
+        "Générer des analyses anonymisées pour améliorer les résultats en matière de santé"
+      ]
+    },
+    "section4": {
+      "title": "4. Consentement",
+      "intro": "Doktochain utilise un modèle de consentement appliqué par la base de données. Avant qu'un prestataire de soins de santé puisse accéder à vos informations de santé, vous devez fournir un consentement explicite par l'intermédiaire de notre plateforme. Les principales caractéristiques de notre modèle de consentement comprennent :",
+      "items": [
+        "<strong>Consentement granulaire :</strong> Vous contrôlez quels fournisseurs peuvent accéder à des catégories spécifiques de vos données de santé",
+        "<strong>Fenêtres d'accès temporelles :</strong> Les autorisations de consentement sont limitées à des périodes spécifiques pertinentes à vos soins",
+        "<strong>Révocable à tout moment :</strong> Vous pouvez retirer votre consentement à tout moment via votre tableau de bord patient",
+        "<strong>Piste d'audit :</strong> Chaque action de consentement est enregistrée dans notre système d'audit de chaîne de hachage inviolable"
+      ]
+    },
+    "section5": {
+      "title": "5. Comment nous partageons vos informations",
+      "intro": "Nous ne pouvons partager vos informations que dans les circonstances suivantes :",
+      "items": [
+        "<strong>Avec vos prestataires de soins de santé :</strong> Uniquement avec votre consentement explicite et dans les fenêtres de temps approuvées",
+        "<strong>Avec les pharmacies :</strong> Lorsque vous dirigez une prescription vers une pharmacie de votre choix",
+        "<strong>Avec les processeurs de paiement :</strong> Pour traiter les paiements en toute sécurité via Stripe",
+        "<strong>Comme requis par la loi :</strong> Lorsque contraint par un processus juridique, une réglementation ou pour protéger la sécurité",
+        "<strong>Avec votre autorisation expresse :</strong> Pour tout autre objectif que vous approuvez spécifiquement"
+      ],
+      "noSale": "Nous ne vendons jamais vos renseignements personnels ou renseignements personnels sur la santé à des tiers."
+    },
+    "section6": {
+      "title": "6. Sécurité des données",
+      "intro": "Nous mettons en œuvre des mesures de sécurité complètes, notamment :",
+      "items": [
+        "Chiffrement de bout en bout pour les données en transit et au repos",
+        "Sécurité au niveau des lignes (RLS) appliquée au niveau de la base de données",
+        "Piste d'audit de chaîne de hachage cryptographique pour tous les événements d'accès aux données",
+        "Support d'authentification multifactorielle",
+        "Évaluations de sécurité régulières et tests de pénétration",
+        "Structures de données conformes FHIR R4 pour l'interopérabilité des soins de santé"
+      ]
+    },
+    "section7": {
+      "title": "7. Conservation des données",
+      "content": "Nous conservons les renseignements personnels sur la santé conformément à la législation canadienne applicable en matière de soins de santé. Les dossiers médicaux sont conservés pendant un minimum de 10 ans à partir de la dernière date de service, ou plus longtemps selon les réglementations provinciales. Vous pouvez demander la suppression de renseignements personnels non cliniques en communiquant avec notre bureau de la protection de la vie privée."
+    },
+    "section8": {
+      "title": "8. Vos droits",
+      "intro": "En vertu de la LPRPDE et de la législation provinciale applicable, vous avez le droit de :",
+      "items": [
+        "Accéder à vos renseignements personnels et dossiers de santé sans frais",
+        "Demander des corrections aux informations inexactes",
+        "Retirer le consentement pour la collecte et l'utilisation des données",
+        "Déposer une plainte auprès de notre responsable de la protection de la vie privée ou du Commissariat à la protection de la vie privée du Canada",
+        "Exporter vos données de santé dans des formats compatibles FHIR"
+      ]
+    },
+    "section9": {
+      "title": "9. Confidentialité des enfants",
+      "content": "Notre plateforme prend en charge les comptes familiaux où les parents ou tuteurs légaux peuvent gérer les informations de santé des personnes à charge mineures. Nous ne recueillons pas sciemment de renseignements personnels d'enfants de moins de 13 ans sans le consentement parental vérifiable."
+    },
+    "section10": {
+      "title": "10. Nous contacter",
+      "intro": "Si vous avez des questions sur cette politique de confidentialité ou si vous souhaitez exercer vos droits à la vie privée, veuillez contacter notre responsable de la protection de la vie privée :",
+      "items": [
+        "Courriel : privacy@doktochain.ca",
+        "Téléphone : 1-800-DOKTO-CHAIN",
+        "Adresse : Toronto, ON, Canada"
+      ]
+    }
+  },
+  "terms": {
+    "section1": {
+      "title": "1. Acceptation des conditions",
+      "content": "En accédant ou en utilisant la plateforme Doktochain (« Plateforme »), vous acceptez d'être lié par ces conditions d'utilisation (« Conditions »). Si vous n'acceptez pas ces conditions, vous ne pouvez pas accéder ou utiliser la plateforme. Ces conditions constituent un accord juridiquement contraignant entre vous et Doktochain Inc. (« Doktochain », « nous », « notre » ou « nos »)."
+    },
+    "section2": {
+      "title": "2. Description des services",
+      "intro": "Doktochain est une plateforme de technologie de la santé qui connecte les patients aux prestataires de soins de santé et aux pharmacies à travers le Canada. Nos services comprennent :",
+      "items": [
+        "Découverte de fournisseurs et réservation de rendez-vous",
+        "Facilitation de consultations vidéo et en personne",
+        "Gestion électronique des prescriptions et exécution en pharmacie",
+        "Gestion des dossiers de santé et partage sécurisé des données",
+        "Traitement des paiements pour les services de santé",
+        "Outils de gestion de pratique pour les prestataires de soins de santé"
+      ],
+      "disclaimer": "<strong>Important :</strong> Doktochain est une plateforme technologique et ne fournit pas de conseils médicaux, de diagnostic ou de traitement. Toutes les décisions cliniques sont prises indépendamment par des prestataires de soins de santé agréés."
+    },
+    "section3": {
+      "title": "3. Comptes d'utilisateur",
+      "registration": {
+        "title": "3.1 Inscription",
+        "content": "Pour utiliser certaines fonctionnalités de la plateforme, vous devez créer un compte. Vous acceptez de fournir des informations exactes, à jour et complètes lors de l'inscription et de maintenir les informations de votre compte à jour."
+      },
+      "accountTypes": {
+        "title": "3.2 Types de comptes",
+        "items": [
+          "<strong>Comptes patients :</strong> Pour les personnes recherchant des services de santé",
+          "<strong>Comptes fournisseurs :</strong> Pour les professionnels de la santé agréés (sous réserve de vérification des informations d'identification)",
+          "<strong>Comptes pharmacies :</strong> Pour les pharmacies agréées (sous réserve de vérification de permis)",
+          "<strong>Comptes cliniques :</strong> Pour les organisations de soins de santé gérant plusieurs fournisseurs"
+        ]
+      },
+      "security": {
+        "title": "3.3 Sécurité du compte",
+        "content": "Vous êtes responsable du maintien de la confidentialité de vos informations d'identification de compte. Vous devez nous informer immédiatement de toute utilisation non autorisée de votre compte. Nous ne sommes pas responsables de toute perte découlant de l'utilisation non autorisée de votre compte."
+      }
+    },
+    "section4": {
+      "title": "4. Conditions pour les prestataires de soins de santé",
+      "intro": "Les prestataires de soins de santé utilisant la plateforme acceptent de :",
+      "items": [
+        "Maintenir des licences professionnelles valides et à jour dans leur(s) province(s) de pratique",
+        "Fournir des informations d'identification et de qualification exactes",
+        "Se conformer à tous les règlements médicaux applicables et aux normes de soins",
+        "Maintenir une assurance responsabilité professionnelle appropriée",
+        "Utiliser le système de consentement de la plateforme avant d'accéder aux données des patients",
+        "Documenter les rencontres cliniques conformément aux exigences réglementaires"
+      ]
+    },
+    "section5": {
+      "title": "5. Conditions pour les pharmacies",
+      "intro": "Les pharmacies utilisant la plateforme acceptent de :",
+      "items": [
+        "Maintenir des licences de pharmacie valides dans leur(s) province(s) d'exploitation",
+        "Dispenser des médicaments conformément aux règlements de pharmacie applicables",
+        "Maintenir des registres d'inventaire précis",
+        "Traiter les prescriptions reçues via la plateforme en temps opportun",
+        "Se conformer à toutes les obligations de sécurité et de signalement des médicaments"
+      ]
+    },
+    "section6": {
+      "title": "6. Conditions pour les patients",
+      "intro": "Les patients utilisant la plateforme acceptent de :",
+      "items": [
+        "Fournir des informations personnelles et de santé exactes",
+        "Comprendre que la télémédecine a des limites par rapport aux visites en personne",
+        "Rechercher des soins d'urgence en appelant le 911 pour les urgences, pas via la plateforme",
+        "Effectuer le paiement en temps opportun pour les services rendus",
+        "Gérer les autorisations de consentement de manière responsable"
+      ]
+    },
+    "section7": {
+      "title": "7. Paiements et frais",
+      "patientPayments": {
+        "title": "7.1 Paiements des patients",
+        "content": "Les patients sont responsables du paiement des frais de consultation, des coûts de prescription et de tous autres frais engagés via la plateforme. Les paiements sont traités en toute sécurité via Stripe."
+      },
+      "subscriptions": {
+        "title": "7.2 Abonnements des fournisseurs et des pharmacies",
+        "content": "Les fournisseurs et les pharmacies peuvent être soumis à des frais d'abonnement tels qu'indiqués dans leur plan sélectionné. Des frais de transaction peuvent s'appliquer à certains types de paiement tels que spécifiés dans le barème de tarification."
+      },
+      "refunds": {
+        "title": "7.3 Remboursements",
+        "content": "Les politiques de remboursement varient selon le type de service. Les rendez-vous annulés peuvent être soumis à des frais d'annulation tels que spécifiés par le fournisseur. Les frais contestés doivent être signalés dans les 30 jours."
+      }
+    },
+    "section8": {
+      "title": "8. Propriété intellectuelle",
+      "content": "La plateforme, y compris sa conception, ses fonctionnalités, son contenu et sa technologie sous-jacente, appartient à Doktochain et est protégée par les lois canadiennes et internationales sur la propriété intellectuelle. Les utilisateurs conservent la propriété de leurs données personnelles et dossiers de santé."
+    },
+    "section9": {
+      "title": "9. Conduite interdite",
+      "intro": "Vous acceptez de ne pas :",
+      "items": [
+        "Utiliser la plateforme à des fins illégales",
+        "Tenter d'accéder au compte ou aux données d'un autre utilisateur sans autorisation",
+        "Interférer avec ou perturber le fonctionnement de la plateforme",
+        "Télécharger des logiciels ou du contenu malveillants",
+        "Extraire, explorer ou extraire autrement des données de la plateforme",
+        "Usurper l'identité d'une personne ou d'une entité",
+        "Utiliser la plateforme pour distribuer des communications non sollicitées"
+      ]
+    },
+    "section10": {
+      "title": "10. Limitation de responsabilité",
+      "para1": "Dans la mesure maximale permise par la loi, Doktochain ne sera pas responsable de tout dommage indirect, accessoire, spécial, consécutif ou punitif découlant de votre utilisation de la plateforme. Notre responsabilité totale ne dépassera pas les frais que vous nous avez payés au cours des 12 mois précédant la réclamation.",
+      "para2": "Doktochain n'est pas responsable de la qualité des soins fournis par les prestataires de soins de santé ou de l'exactitude des informations fournies par les pharmacies sur la plateforme."
+    },
+    "section11": {
+      "title": "11. Résiliation",
+      "content": "L'une ou l'autre des parties peut mettre fin à la relation à tout moment. Nous pouvons suspendre ou résilier votre compte si vous violez ces conditions. Lors de la résiliation, votre droit d'utiliser la plateforme cesse, mais les dispositions concernant la conservation des données, la propriété intellectuelle et la limitation de responsabilité survivront."
+    },
+    "section12": {
+      "title": "12. Loi applicable",
+      "content": "Ces conditions sont régies et interprétées conformément aux lois de la province de l'Ontario et aux lois fédérales du Canada qui y sont applicables. Tout litige sera résolu devant les tribunaux de l'Ontario, Canada."
+    },
+    "section13": {
+      "title": "13. Modifications de ces conditions",
+      "content": "Nous pouvons mettre à jour ces conditions de temps à autre. Nous vous informerons des changements importants via la plateforme ou par courriel. Votre utilisation continue de la plateforme après l'entrée en vigueur des modifications constitue l'acceptation des conditions mises à jour."
+    },
+    "section14": {
+      "title": "14. Contact",
+      "intro": "Pour des questions sur ces conditions, veuillez nous contacter :",
+      "items": [
+        "Courriel : legal@doktochain.ca",
+        "Téléphone : 1-800-DOKTO-CHAIN",
+        "Adresse : Toronto, ON, Canada"
+      ]
+    }
+  },
+  "cookies": {
+    "section1": {
+      "title": "1. Que sont les témoins",
+      "content": "Les témoins (cookies) sont de petits fichiers texte stockés sur votre appareil lorsque vous visitez un site Web. Ils aident le site Web à se souvenir de vos préférences et à comprendre comment vous interagissez avec lui. Doktochain utilise des témoins et des technologies similaires pour fournir, sécuriser et améliorer notre plateforme."
+    },
+    "section2": {
+      "title": "2. Comment nous utilisons les témoins",
+      "intro": "Nous utilisons des témoins aux fins suivantes :",
+      "essential": {
+        "title": "2.1 Témoins essentiels",
+        "intro": "Ces témoins sont nécessaires au fonctionnement de la plateforme et ne peuvent pas être désactivés. Ils comprennent :",
+        "items": [
+          "<strong>Témoins d'authentification :</strong> Vous maintiennent connecté en toute sécurité pendant votre session",
+          "<strong>Témoins de sécurité :</strong> Protègent contre la falsification de requête intersites et autres menaces",
+          "<strong>Gestion de session :</strong> Maintiennent l'état de votre session lorsque vous naviguez sur la plateforme",
+          "<strong>Préférences de consentement :</strong> Se souviennent de vos choix de consentement aux témoins"
+        ]
+      },
+      "functional": {
+        "title": "2.2 Témoins fonctionnels",
+        "intro": "Ces témoins permettent des fonctionnalités améliorées et la personnalisation :",
+        "items": [
+          "<strong>Préférences linguistiques :</strong> Se souviennent de vos paramètres de langue préférés",
+          "<strong>Préférences de thème :</strong> Stockent vos préférences d'affichage (mode clair/sombre)",
+          "<strong>Recherches récentes :</strong> Se souviennent de vos recherches récentes de fournisseurs ou de spécialités"
+        ]
+      },
+      "analytics": {
+        "title": "2.3 Témoins analytiques",
+        "intro": "Ces témoins nous aident à comprendre comment les utilisateurs interagissent avec la plateforme afin que nous puissions l'améliorer :",
+        "items": [
+          "Modèles de consultation de pages et de navigation",
+          "Statistiques d'utilisation des fonctionnalités",
+          "Surveillance des erreurs et des performances"
+        ],
+        "note": "Les données analytiques sont agrégées et anonymisées. Nous n'utilisons pas de témoins analytiques pour suivre les informations de santé individuelles ou les interactions cliniques."
+      }
+    },
+    "section3": {
+      "title": "3. Témoins de tiers",
+      "intro": "Certains services tiers utilisés par Doktochain peuvent définir leurs propres témoins :",
+      "items": [
+        "<strong>Supabase :</strong> Authentification et gestion de session",
+        "<strong>Stripe :</strong> Traitement des paiements et prévention de la fraude",
+        "<strong>Daily.co :</strong> Fonctionnalité de consultation vidéo"
+      ],
+      "note": "Ces tiers ont leurs propres politiques de confidentialité et de témoins. Nous vous encourageons à consulter leurs politiques pour plus d'informations."
+    },
+    "section4": {
+      "title": "4. Gestion des témoins",
+      "intro": "Vous pouvez gérer les témoins par plusieurs méthodes :",
+      "browser": {
+        "title": "4.1 Paramètres du navigateur",
+        "content": "La plupart des navigateurs Web vous permettent de contrôler les témoins via leurs paramètres. Vous pouvez généralement les trouver sous « Confidentialité » ou « Sécurité » dans les préférences de votre navigateur. Notez que la désactivation des témoins essentiels peut vous empêcher d'utiliser certaines fonctionnalités de la plateforme."
+      },
+      "controls": {
+        "title": "4.2 Contrôles de témoins spécifiques",
+        "items": [
+          "<strong>Témoins essentiels :</strong> Ne peuvent pas être désactivés car ils sont requis pour le fonctionnement de la plateforme",
+          "<strong>Témoins fonctionnels :</strong> Peuvent être désactivés, mais certaines fonctionnalités peuvent ne pas fonctionner comme prévu",
+          "<strong>Témoins analytiques :</strong> Peuvent être refusés sans affecter la fonctionnalité de la plateforme"
+        ]
+      }
+    },
+    "section5": {
+      "title": "5. Protection des données",
+      "content": "Les données des témoins sont traitées conformément à notre politique de confidentialité et aux exigences de la LPRPDE. Nous ne stockons pas de renseignements personnels sur la santé dans les témoins. Les jetons d'authentification stockés dans les témoins sont chiffrés et expirent après la fin de la session."
+    },
+    "section6": {
+      "title": "6. Mises à jour de cette politique",
+      "content": "Nous pouvons mettre à jour cette politique de témoins à mesure que notre technologie ou nos exigences légales changent. Nous vous informerons des changements importants via la plateforme."
+    },
+    "section7": {
+      "title": "7. Contact",
+      "intro": "Pour des questions sur notre utilisation des témoins, veuillez contacter :",
+      "items": [
+        "Courriel : privacy@doktochain.ca",
+        "Téléphone : 1-800-DOKTO-CHAIN"
+      ]
+    }
+  },
+  "hipaa": {
+    "section1": {
+      "title": "1. Aperçu",
+      "content": "Bien que Doktochain soit une plateforme de soins de santé canadienne principalement régie par la LPRPDE et la législation provinciale sur la protection de la vie privée en matière de santé, nous reconnaissons que les normes de protection des données de santé sont de portée internationale. Nous concevons nos pratiques de sécurité et de confidentialité pour répondre ou dépasser les normes établies par la législation canadienne et la loi américaine sur la portabilité et la responsabilité de l'assurance maladie (HIPAA)."
+    },
+    "section2": {
+      "title": "2. Cadre de confidentialité canadien",
+      "intro": "Doktochain fonctionne en conformité avec :",
+      "items": [
+        "<strong>LPRPDE</strong> -- Loi sur la protection des renseignements personnels et les documents électroniques (fédéral)",
+        "<strong>LPRPS</strong> -- Loi sur la protection des renseignements personnels sur la santé (Ontario)",
+        "<strong>HIA</strong> -- Loi sur l'information sur la santé (Alberta)",
+        "<strong>PIPA</strong> -- Loi sur la protection des renseignements personnels (Colombie-Britannique)",
+        "<strong>Loi sur la protection des renseignements personnels dans le secteur privé</strong> (Québec)"
+      ],
+      "note": "Ces lois offrent collectivement une protection complète des renseignements personnels sur la santé qui est comparable et, à bien des égards, dépasse les exigences de la HIPAA."
+    },
+    "section3": {
+      "title": "3. Garanties de sécurité",
+      "intro": "Doktochain met en œuvre des garanties administratives, techniques et physiques qui s'alignent sur les exigences canadiennes et la règle de sécurité de la HIPAA :",
+      "administrative": {
+        "title": "3.1 Garanties administratives",
+        "items": [
+          "Responsable de la protection de la vie privée désigné responsable de la surveillance de la conformité",
+          "Évaluations régulières des risques et audits de sécurité",
+          "Formation du personnel sur les pratiques de confidentialité et de sécurité",
+          "Procédures d'intervention en cas d'incident et de notification de violation",
+          "Accords d'associé commercial avec tous les fournisseurs de services traitant les RPS"
+        ]
+      },
+      "technical": {
+        "title": "3.2 Garanties techniques",
+        "items": [
+          "<strong>Contrôles d'accès :</strong> Accès basé sur les rôles avec sécurité au niveau des lignes (RLS) appliquée au niveau de la couche de base de données",
+          "<strong>Chiffrement :</strong> Chiffrement AES-256 au repos, TLS 1.3 en transit",
+          "<strong>Journalisation d'audit :</strong> Piste d'audit de chaîne de hachage cryptographique pour tous les événements d'accès aux données",
+          "<strong>Authentification :</strong> Authentification sécurisée avec support d'authentification multifactorielle",
+          "<strong>Application du consentement :</strong> Vérifications de consentement au niveau de la base de données avec fenêtres d'accès temporelles",
+          "<strong>Intégrité des données :</strong> Structures de données conformes FHIR R4 avec contraintes d'intégrité référentielle"
+        ]
+      },
+      "physical": {
+        "title": "3.3 Garanties physiques",
+        "items": [
+          "Données hébergées sur une infrastructure certifiée SOC 2 Type II",
+          "Résidence des données canadiennes -- toutes les données de santé stockées au Canada",
+          "Sauvegardes redondantes avec distribution géographique à l'intérieur des frontières canadiennes",
+          "Contrôles environnementaux et restrictions d'accès physique aux centres de données"
+        ]
+      }
+    },
+    "section4": {
+      "title": "4. Modèle d'accès basé sur le consentement",
+      "intro": "Le modèle de consentement de Doktochain va au-delà des exigences réglementaires minimales en mettant en œuvre un consentement appliqué par la base de données qui ne peut pas être contourné par le code au niveau de l'application :",
+      "items": [
+        "Chaque accès aux données inter-fournisseurs nécessite le consentement actif du patient",
+        "Les autorisations de consentement incluent des fenêtres temporelles et des catégories de données spécifiques",
+        "Toutes les actions de consentement sont enregistrées dans la piste d'audit inviolable",
+        "Les patients peuvent consulter, modifier et révoquer le consentement à tout moment",
+        "Les fenêtres de consentement expirées mettent automatiquement fin à l'accès"
+      ]
+    },
+    "section5": {
+      "title": "5. Notification de violation",
+      "intro": "En cas de violation de données impliquant des renseignements personnels sur la santé, Doktochain :",
+      "items": [
+        "Informera les personnes concernées dès que possible, et au plus tard selon les exigences de la loi applicable",
+        "Signalera au Commissariat à la protection de la vie privée du Canada et aux régulateurs provinciaux pertinents",
+        "Documentera la violation, son impact et les mesures correctives prises",
+        "Mettra en œuvre des mesures pour prévenir la récurrence"
+      ]
+    },
+    "section6": {
+      "title": "6. Droits des patients",
+      "intro": "Conformément à la loi canadienne sur la protection de la vie privée et à la règle de confidentialité de la HIPAA, Doktochain garantit que les patients peuvent :",
+      "items": [
+        "Accéder à leurs dossiers de santé complets sans frais via le tableau de bord patient",
+        "Demander des modifications à leurs dossiers",
+        "Recevoir un compte rendu des divulgations via la piste d'audit",
+        "Exporter leurs données dans des formats compatibles FHIR",
+        "Déposer des plaintes auprès du responsable de la protection de la vie privée ou des organismes de réglementation pertinents"
+      ]
+    },
+    "section7": {
+      "title": "7. Amélioration continue",
+      "intro": "Nous évaluons et améliorons continuellement notre posture de sécurité grâce à :",
+      "items": [
+        "Tests de pénétration réguliers et évaluations de vulnérabilité",
+        "Examens de conformité annuels par rapport aux normes réglementaires en évolution",
+        "Surveillance continue des menaces de sécurité et des meilleures pratiques de l'industrie",
+        "Programmes de formation et de sensibilisation du personnel"
+      ]
+    },
+    "section8": {
+      "title": "8. Contact",
+      "intro": "Pour des questions sur nos pratiques de conformité ou pour signaler un problème de sécurité :",
+      "items": [
+        "Responsable de la protection de la vie privée : privacy@doktochain.ca",
+        "Équipe de sécurité : security@doktochain.ca",
+        "Téléphone : 1-800-DOKTO-CHAIN"
+      ],
+      "moreInfo": "Pour plus d'informations sur la façon dont nous protégeons vos données, veuillez consulter notre"
+    }
+  },
+  "accessibility": {
+    "title": "Accessibilité",
+    "section1": {
+      "title": "1. Notre engagement",
+      "para1": "Doktochain s'engage à garantir que notre plateforme est accessible à tous les utilisateurs, y compris les personnes handicapées. Nous croyons que tout le monde mérite un accès égal aux services de santé, et nous nous efforçons de rendre notre expérience numérique aussi inclusive que possible.",
+      "para2": "Nous nous engageons à respecter ou à dépasser les exigences de la Loi sur l'accessibilité pour les personnes handicapées de l'Ontario (LAPHO) et des Règles pour l'accessibilité des contenus Web (WCAG) 2.1 niveau AA."
+    },
+    "section2": {
+      "title": "2. Normes d'accessibilité",
+      "intro": "Notre plateforme est conçue et développée pour se conformer à :",
+      "items": [
+        "<strong>WCAG 2.1 niveau AA :</strong> La norme internationalement reconnue pour l'accessibilité Web",
+        "<strong>LAPHO :</strong> Loi sur l'accessibilité pour les personnes handicapées de l'Ontario, Règlement sur les normes d'accessibilité intégrées",
+        "<strong>LCA :</strong> Exigences de la Loi canadienne sur l'accessibilité pour les entités sous réglementation fédérale"
+      ]
+    },
+    "section3": {
+      "title": "3. Fonctionnalités d'accessibilité",
+      "visual": {
+        "title": "3.1 Accessibilité visuelle",
+        "items": [
+          "Ratios de contraste de couleurs suffisants dans toute l'interface",
+          "Texte redimensionnable qui peut être mis à l'échelle jusqu'à 200% sans perte de contenu",
+          "Texte alternatif pour toutes les images et icônes significatives",
+          "Indicateurs de focus visuels clairs pour la navigation au clavier",
+          "Aucun contenu qui s'appuie uniquement sur la couleur pour transmettre des informations"
+        ]
+      },
+      "navigation": {
+        "title": "3.2 Navigation et interaction",
+        "items": [
+          "Navigabilité complète au clavier pour toutes les fonctionnalités de la plateforme",
+          "Ordre de tabulation logique et gestion du focus",
+          "Liens de saut de navigation pour un accès rapide au contenu principal",
+          "Modèles de navigation cohérents sur toutes les pages",
+          "Texte de lien clair et descriptif"
+        ]
+      },
+      "content": {
+        "title": "3.3 Accessibilité du contenu",
+        "items": [
+          "Hiérarchie de titres claire pour la navigation par lecteur d'écran",
+          "Étiquettes descriptives pour tous les champs de formulaire",
+          "Messages d'erreur qui identifient et décrivent clairement les problèmes",
+          "Temps suffisant prévu pour les actions sensibles au facteur temps",
+          "Contenu structuré avec des éléments HTML sémantiques"
+        ]
+      },
+      "assistive": {
+        "title": "3.4 Support de technologie d'assistance",
+        "items": [
+          "Points de repère et rôles ARIA pour la compatibilité avec les lecteurs d'écran",
+          "Régions dynamiques pour les mises à jour de contenu dynamiques",
+          "Compatible avec les lecteurs d'écran populaires (NVDA, JAWS, VoiceOver)",
+          "Support du zoom du navigateur et du zoom texte uniquement"
+        ]
+      }
+    },
+    "section4": {
+      "title": "4. Accessibilité de la télémédecine",
+      "intro": "Nos fonctionnalités de consultation vidéo sont conçues en tenant compte de l'accessibilité :",
+      "items": [
+        "Contrôles vidéo accessibles au clavier",
+        "Messagerie sécurisée comme canal de communication alternatif",
+        "Indicateurs audio clairs pour l'état de la connexion",
+        "Compatibilité avec les appareils d'assistance"
+      ]
+    },
+    "section5": {
+      "title": "5. Efforts continus",
+      "intro": "Nous travaillons continuellement à améliorer l'accessibilité grâce à :",
+      "items": [
+        "Audits d'accessibilité réguliers par des évaluateurs qualifiés",
+        "Tests automatisés et manuels pendant le développement",
+        "Incorporation des commentaires des utilisateurs handicapés",
+        "Formation du personnel sur les meilleures pratiques d'accessibilité",
+        "Surveillance des mises à jour des normes d'accessibilité"
+      ]
+    },
+    "section6": {
+      "title": "6. Limitations connues",
+      "content": "Bien que nous nous efforcions d'assurer une accessibilité complète, certains contenus ou fonctionnalités de tiers peuvent avoir des limitations au-delà de notre contrôle direct. Nous travaillons avec nos partenaires technologiques pour plaider en faveur d'une meilleure accessibilité dans leurs services, y compris les composants de vidéoconférence et de traitement des paiements."
+    },
+    "section7": {
+      "title": "7. Commentaires et assistance",
+      "intro": "Nous accueillons vos commentaires sur l'accessibilité de la plateforme Doktochain. Si vous rencontrez des obstacles à l'accessibilité ou avez besoin d'aide, veuillez nous contacter :",
+      "items": [
+        "Courriel : accessibility@doktochain.ca",
+        "Téléphone : 1-800-DOKTO-CHAIN",
+        "Adresse : Toronto, ON, Canada"
+      ],
+      "response": "Nous visons à répondre aux commentaires sur l'accessibilité dans les 2 jours ouvrables et à résoudre les obstacles signalés le plus rapidement possible."
+    },
+    "section8": {
+      "title": "8. Plaintes formelles",
+      "content": "Si vous n'êtes pas satisfait de notre réponse à une préoccupation en matière d'accessibilité, vous pouvez déposer une plainte formelle auprès de la Direction générale de l'accessibilité de l'Ontario ou de l'organisme provincial d'accessibilité pertinent."
+    }
+  },
+  "refund": {
+    "section1": {
+      "title": "1. Aperçu",
+      "content": "Doktochain Inc. (« Doktochain », « nous », « notre » ou « nos ») s'engage à des pratiques de remboursement justes et transparentes pour tous les services offerts par l'intermédiaire de notre plateforme. Cette politique de remboursement décrit les circonstances dans lesquelles des remboursements complets ou partiels peuvent être accordés pour les frais de consultation, les plans d'abonnement et les commandes en pharmacie. En utilisant la plateforme Doktochain, vous acceptez les termes de cette politique de remboursement."
+    },
+    "section2": {
+      "title": "2. Admissibilité au remboursement par type de service",
+      "intro": "L'admissibilité au remboursement varie selon le type de service. Les sections suivantes décrivent les conditions de remboursement spécifiques pour chaque catégorie de service offerte par la plateforme Doktochain.",
+      "consultations": {
+        "title": "2.1 Consultations médicales (en personne et télémédecine)",
+        "intro": "L'admissibilité au remboursement pour les consultations médicales dépend du moment de l'annulation et de la réalisation ou non de la consultation :",
+        "items": [
+          "<strong>Annulation plus de 24 heures avant le rendez-vous :</strong> Remboursement complet des frais de consultation",
+          "<strong>Annulation entre 4 et 24 heures avant le rendez-vous :</strong> Remboursement partiel de 50 % des frais de consultation",
+          "<strong>Annulation moins de 4 heures avant le rendez-vous ou absence :</strong> Aucun remboursement; la totalité des frais de consultation est retenue",
+          "<strong>Défaillance technique (côté plateforme ou fournisseur) :</strong> Remboursement complet si la consultation n'a pas pu avoir lieu en raison de problèmes techniques liés à la plateforme, vérifiés par notre équipe de support",
+          "<strong>Annulation par le fournisseur :</strong> Remboursement complet émis automatiquement si le prestataire de soins annule le rendez-vous"
+        ]
+      },
+      "subscriptions": {
+        "title": "2.2 Plans d'abonnement (fournisseurs, pharmacies et cliniques)",
+        "intro": "Les frais d'abonnement pour les prestataires de soins de santé, les pharmacies et les cliniques sont soumis aux conditions de remboursement suivantes :",
+        "items": [
+          "<strong>Période d'essai gratuite :</strong> Aucun frais pendant la période d'essai. Vous ne serez pas facturé si vous annulez avant l'expiration de l'essai",
+          "<strong>Annulation dans les 14 jours suivant la première facturation payante :</strong> Remboursement complet de la période de facturation en cours, à condition qu'aucune utilisation significative de la plateforme n'ait eu lieu (par exemple, moins de 5 interactions avec des patients)",
+          "<strong>Annulation après 14 jours de facturation payante :</strong> Aucun remboursement pour la période de facturation en cours. Votre abonnement restera actif jusqu'à la fin du cycle de facturation en cours",
+          "<strong>Annulation d'abonnement annuel :</strong> Remboursement partiel calculé au prorata des mois complets restants non utilisés du terme annuel, moins des frais de résiliation anticipée de 10 %",
+          "<strong>Rétrogradation :</strong> Aucun remboursement pour la période en cours. La tarification du niveau inférieur prend effet au début du prochain cycle de facturation"
+        ]
+      },
+      "pharmacy": {
+        "title": "2.3 Commandes en pharmacie et prescriptions",
+        "intro": "Les remboursements pour les commandes en pharmacie sont soumis aux réglementations de santé et de sécurité :",
+        "items": [
+          "<strong>Commande annulée avant la préparation :</strong> Remboursement complet si la pharmacie n'a pas encore commencé à préparer la commande",
+          "<strong>Commande annulée après la préparation :</strong> Aucun remboursement, car les médicaments préparés ne peuvent pas être remis en stock conformément aux réglementations pharmaceutiques canadiennes",
+          "<strong>Commande incorrecte ou endommagée :</strong> Remboursement complet ou remplacement pour les commandes arrivées endommagées, contenant le mauvais médicament ou des quantités incorrectes. Vous devez signaler le problème dans les 48 heures suivant la réception",
+          "<strong>Produits en vente libre :</strong> Remboursement complet dans les 14 jours suivant la livraison si le produit est non ouvert et dans son emballage d'origine. Les produits en vente libre ouverts ne sont pas admissibles au remboursement"
+        ]
+      }
+    },
+    "section3": {
+      "title": "3. Détail des remboursements complets et partiels",
+      "intro": "Ce qui suit résume les conditions de remboursement complet et partiel pour toutes les catégories de services.",
+      "full": {
+        "title": "3.1 Conditions de remboursement complet",
+        "intro": "Un remboursement complet (100 % du montant payé) est émis dans les circonstances suivantes :",
+        "items": [
+          "Consultation annulée plus de 24 heures à l'avance",
+          "Le fournisseur annule le rendez-vous pour quelque raison que ce soit",
+          "Défaillance technique de la plateforme empêchant la tenue de la consultation",
+          "Abonnement annulé dans les 14 jours suivant la première facturation payante (avec utilisation minimale)",
+          "Commande en pharmacie annulée avant le début de la préparation",
+          "Commande en pharmacie incorrecte ou endommagée signalée dans les 48 heures",
+          "Double facturation ou erreur de facturation confirmée par notre équipe de facturation"
+        ]
+      },
+      "partial": {
+        "title": "3.2 Conditions de remboursement partiel",
+        "intro": "Un remboursement partiel est émis lorsque le service a été partiellement fourni ou que l'annulation tombe dans une fenêtre de préavis tardif :",
+        "items": [
+          "<strong>Remboursement de 50 % :</strong> Consultation annulée entre 4 et 24 heures avant l'heure prévue",
+          "<strong>Remboursement au prorata (moins 10 % de frais) :</strong> Abonnement annuel annulé après 14 jours, calculé pour les mois complets restants non utilisés",
+          "<strong>Au cas par cas :</strong> Consultations où des problèmes techniques importants sont survenus en cours de session, évalués par notre équipe de support",
+          "<strong>Livraison partielle :</strong> Commandes en pharmacie où seule une partie des articles était incorrecte ou endommagée"
+        ]
+      },
+      "nonRefundable": {
+        "title": "3.3 Frais non remboursables",
+        "intro": "Les frais suivants ne sont admissibles à aucun remboursement :",
+        "items": [
+          "Consultations complétées en totalité",
+          "Rendez-vous manqués (le patient ne s'est pas présenté sans annulation préalable)",
+          "Annulations effectuées moins de 4 heures avant le rendez-vous prévu",
+          "Médicaments sur ordonnance préparés (conformément aux réglementations pharmaceutiques canadiennes)",
+          "Produits en vente libre ouverts",
+          "Frais d'abonnement mensuel après l'expiration de la fenêtre de remboursement de 14 jours",
+          "Frais de traitement des paiements facturés par des fournisseurs tiers (Stripe)"
+        ]
+      }
+    },
+    "section4": {
+      "title": "4. Comment demander un remboursement",
+      "intro": "Pour demander un remboursement, suivez ces étapes :",
+      "items": [
+        "<strong>Étape 1 :</strong> Connectez-vous à votre compte Doktochain et accédez à votre section Facturation ou Rendez-vous",
+        "<strong>Étape 2 :</strong> Localisez la transaction ou le rendez-vous pour lequel vous demandez un remboursement",
+        "<strong>Étape 3 :</strong> Cliquez sur « Demander un remboursement » et sélectionnez la raison de votre demande",
+        "<strong>Étape 4 :</strong> Fournissez tout détail ou documentation à l'appui (par exemple, captures d'écran de problèmes techniques)",
+        "<strong>Étape 5 :</strong> Soumettez votre demande. Vous recevrez un courriel de confirmation avec un numéro de référence",
+        "Vous pouvez également contacter notre équipe de support directement à <strong>billing@doktochain.ca</strong> ou appeler le <strong>1-800-DOKTO-CHAIN</strong>"
+      ]
+    },
+    "section5": {
+      "title": "5. Délai de traitement des remboursements",
+      "intro": "Une fois qu'un remboursement est approuvé, les délais suivants s'appliquent :",
+      "items": [
+        "<strong>Remboursements par carte de crédit/débit :</strong> 5 à 10 jours ouvrables pour apparaître sur votre relevé, selon votre banque",
+        "<strong>Remboursements pour annulation par le fournisseur :</strong> Traités automatiquement dans un délai de 1 jour ouvrable",
+        "<strong>Remboursements d'abonnement :</strong> Traités dans un délai de 3 à 5 jours ouvrables après approbation",
+        "<strong>Remboursements de commandes en pharmacie :</strong> Traités dans un délai de 5 à 7 jours ouvrables après la vérification du retour ou du problème",
+        "Tous les remboursements sont émis sur le mode de paiement original utilisé pour la transaction"
+      ]
+    },
+    "section6": {
+      "title": "6. Résolution des litiges",
+      "intro": "Si vous n'êtes pas d'accord avec une décision de remboursement, vous disposez des options suivantes :",
+      "items": [
+        "<strong>Examen interne :</strong> Demandez un examen de la décision en contactant notre équipe de facturation à billing@doktochain.ca dans les 30 jours suivant la décision initiale",
+        "<strong>Escalade :</strong> Si l'examen interne ne résout pas le problème, vous pouvez escalader auprès de notre responsable de l'expérience client",
+        "<strong>Rétrofacturation :</strong> Vous conservez le droit de contester les frais auprès de votre fournisseur de carte de crédit, bien que nous vous encouragions à résoudre les litiges directement avec nous d'abord pour éviter les retards",
+        "<strong>Protection du consommateur :</strong> Vous pouvez également contacter l'agence provinciale de protection du consommateur applicable pour des conseils supplémentaires"
+      ]
+    },
+    "section7": {
+      "title": "7. Mises à jour de la politique",
+      "content": "Doktochain se réserve le droit de mettre à jour cette politique de remboursement à tout moment. Les changements importants seront communiqués par l'intermédiaire de la plateforme et par courriel aux utilisateurs enregistrés. Votre utilisation continue de la plateforme après l'entrée en vigueur des modifications constitue l'acceptation de la politique mise à jour. La version la plus récente de cette politique de remboursement est toujours disponible sur notre site Web."
+    },
+    "section8": {
+      "title": "8. Nous contacter",
+      "intro": "Pour des questions sur cette politique de remboursement ou pour demander un remboursement, veuillez nous contacter :",
+      "items": [
+        "Courriel : billing@doktochain.ca",
+        "Téléphone : 1-800-DOKTO-CHAIN",
+        "Adresse : Toronto, ON, Canada"
+      ]
+    }
+  }
+}

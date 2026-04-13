@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "shadcn_ui": {
+      "enabled": true
+    }
+  }
+}

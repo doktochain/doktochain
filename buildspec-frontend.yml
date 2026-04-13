@@ -1,0 +1,14 @@
+version: 0.2
+
+env:
+  parameter-store:
+    FRONTEND_BUCKET: /doktochain/${DEPLOY_ENV}/frontend-bucket
+    CLOUDFRONT_DIST_ID: /doktochain/${DEPLOY_ENV}/cloudfront-distribution-id
+
+phases:
+  build:
+    commands:
+      - echo "Deploying pre-built frontend artifacts to S3..."
+      - aws s3 sync . s3://$FRONTEND_BUCKET --delete
+      - aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_DIST_ID --paths "/*"
+      - echo "Frontend deployment complete."
