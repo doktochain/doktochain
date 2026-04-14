@@ -103,11 +103,20 @@ export default function MyProfile() {
     if (!user) return;
     setLoading(true);
     try {
-      const { data: profileData } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
+      let profileData: any = null;
+      if (import.meta.env.VITE_API_URL) {
+        const { api } = await import('../../../../lib/api-client');
+        const { data } = await api.get<any>('/auth/me');
+        profileData = data;
+      } else {
+        const { supabase } = await import('../../../../lib/supabase');
+        const { data } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', user.id)
+          .maybeSingle();
+        profileData = data;
+      }
 
       if (profileData) {
         setProfile(profileData);
@@ -140,7 +149,7 @@ export default function MyProfile() {
         setMedications(medData);
         setEmergencyContacts(contactData);
       }
-    } catch (error) {
+        } catch (error) {
       console.error('Error loading profile:', error);
       setMessage({ type: 'error', text: 'Failed to load profile data' });
     } finally {
@@ -154,9 +163,9 @@ export default function MyProfile() {
     setSaving(true);
     setMessage({ type: '', text: '' });
     try {
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({
+      if (import.meta.env.VITE_API_URL) {
+        const { api } = await import('../../../../lib/api-client');
+        const { error } = await api.put<any>('/auth/me', {
           first_name: formData.first_name,
           last_name: formData.last_name,
           phone: formData.phone,
@@ -168,9 +177,28 @@ export default function MyProfile() {
           province: formData.province || null,
           postal_code: formData.postal_code || null,
           country: formData.country || null,
-        })
-        .eq('id', user.id);
-      if (error) throw error;
+        });
+        if (error) throw new Error(error.message);
+      } else {
+        const { supabase } = await import('../../../../lib/supabase');
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({
+            first_name: formData.first_name,
+            last_name: formData.last_name,
+            phone: formData.phone,
+            date_of_birth: formData.date_of_birth || null,
+            gender: formData.gender || null,
+            address_line1: formData.address_line1 || null,
+            address_line2: formData.address_line2 || null,
+            city: formData.city || null,
+            province: formData.province || null,
+            postal_code: formData.postal_code || null,
+            country: formData.country || null,
+          })
+          .eq('id', user.id);
+        if (error) throw error;
+      }
       setMessage({ type: 'success', text: 'Profile updated successfully!' });
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message || 'Failed to update profile' });
@@ -193,21 +221,31 @@ export default function MyProfile() {
     try {
       setUploading(true);
       setMessage({ type: '', text: '' });
-      const fileExt = file.name.split('.').pop();
-      const filePath = `avatars/${user.id}/${Date.now()}.${fileExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from('user-uploads')
-        .upload(filePath, file, { upsert: true });
-      if (uploadError) throw uploadError;
-      const { data: { publicUrl } } = supabase.storage
-        .from('user-uploads')
-        .getPublicUrl(filePath);
-      const { error: updateError } = await supabase
-        .from('user_profiles')
-        .update({ profile_photo_url: publicUrl })
-        .eq('id', user.id);
-      if (updateError) throw updateError;
-      setAvatarUrl(publicUrl);
+  
+      if (import.meta.env.VITE_API_URL) {
+        const { storageClient } = await import('../../../../lib/storage-client');
+        const publicUrl = await storageClient.uploadFile(file, 'profile-photos');
+        const { api } = await import('../../../../lib/api-client');
+        await api.put('/auth/me', { profile_photo_url: publicUrl });
+        setAvatarUrl(publicUrl);
+      } else {
+        const { supabase } = await import('../../../../lib/supabase');
+        const fileExt = file.name.split('.').pop();
+        const filePath = `avatars/${user.id}/${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('user-uploads')
+          .upload(filePath, file, { upsert: true });
+        if (uploadError) throw uploadError;
+        const { data: { publicUrl } } = supabase.storage
+          .from('user-uploads')
+          .getPublicUrl(filePath);
+        const { error: updateError } = await supabase
+          .from('user_profiles')
+          .update({ profile_photo_url: publicUrl })
+          .eq('id', user.id);
+        if (updateError) throw updateError;
+        setAvatarUrl(publicUrl);
+      }
       setMessage({ type: 'success', text: 'Photo uploaded!' });
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message || 'Failed to upload photo' });
