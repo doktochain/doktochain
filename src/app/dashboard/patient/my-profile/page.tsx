@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../../../contexts/AuthContext';
-import { supabase } from '../../../../lib/supabase';
 import { User, Mail, Phone, MapPin, Save, Camera, ArrowLeft, CreditCard, Heart, Pill, AlertTriangle, Shield, Plus, Trash2, CreditCard as Edit2, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { patientService, Patient, PatientAllergy, PatientMedication, EmergencyContact } from '../../../../services/patientService';
@@ -224,7 +223,7 @@ export default function MyProfile() {
   
       if (import.meta.env.VITE_API_URL) {
         const { storageClient } = await import('../../../../lib/storage-client');
-        const publicUrl = await storageClient.uploadFile(file, 'profile-photos');
+        const { publicUrl } = await storageClient.uploadFile('profile-photos', file);
         const { api } = await import('../../../../lib/api-client');
         await api.put('/auth/me', { profile_photo_url: publicUrl });
         setAvatarUrl(publicUrl);
