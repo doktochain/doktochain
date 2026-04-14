@@ -641,6 +641,290 @@ export const clinicService = {
     if (error) throw error;
   },
 
+  async getClinicPatientById(patientId: string): Promise<any> {
+    const { data, error } = await supabase
+      .from('patients')
+      .select('*, user_profiles(first_name, last_name, email, phone, avatar_url, date_of_birth, gender)')
+      .eq('id', patientId)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async getPatientActiveConsents(patientId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('patient_consents')
+      .select('*')
+      .eq('patient_id', patientId)
+      .eq('status', 'active');
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getPatientAppointmentsByProviders(patientId: string, providerIds: string[]): Promise<any[]> {
+    if (providerIds.length === 0) return [];
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('*, providers(*, user_profiles(first_name, last_name))')
+      .eq('patient_id', patientId)
+      .in('provider_id', providerIds)
+      .is('deleted_at', null)
+      .order('appointment_date', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getPatientTransactionsByProviders(userId: string, providerIds: string[]): Promise<any[]> {
+    if (providerIds.length === 0) return [];
+    const { data, error } = await supabase
+      .from('provider_transactions')
+      .select('*')
+      .eq('user_id', userId)
+      .in('provider_id', providerIds)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getPatientLatestVitals(patientId: string): Promise<any> {
+    const { data, error } = await supabase
+      .from('vital_signs')
+      .select('*')
+      .eq('patient_id', patientId)
+      .order('recorded_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async getMedicalServices(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('medical_services')
+      .select('*')
+      .is('deleted_at', null)
+      .order('name');
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getClinicServices(clinicId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('clinic_services')
+      .select('*, medical_services(name, description, category, base_price)')
+      .eq('clinic_id', clinicId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async toggleClinicService(serviceId: string, isActive: boolean): Promise<void> {
+    const { error } = await supabase
+      .from('clinic_services')
+      .update({ is_active: isActive, updated_at: new Date().toISOString() })
+      .eq('id', serviceId);
+
+    if (error) throw error;
+  },
+
+  async activateClinicService(clinicId: string, serviceId: string, customPrice?: number): Promise<void> {
+    const { data: existing } = await supabase
+      .from('clinic_services')
+      .select('id')
+      .eq('clinic_id', clinicId)
+      .eq('service_id', serviceId)
+      .maybeSingle();
+
+    if (existing) {
+      const { error } = await supabase
+        .from('clinic_services')
+        .update({ is_active: true, custom_price: customPrice || null, updated_at: new Date().toISOString() })
+        .eq('id', existing.id);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from('clinic_services')
+        .insert({ clinic_id: clinicId, service_id: serviceId, is_active: true, custom_price: customPrice || null });
+      if (error) throw error;
+    }
+  },
+
+  async updateClinicServicePrice(serviceId: string, customPrice: number | null): Promise<void> {
+    const { error } = await supabase
+      .from('clinic_services')
+      .update({ custom_price: customPrice, updated_at: new Date().toISOString() })
+      .eq('id', serviceId);
+
+    if (error) throw error;
+  },
+
+  async bulkActivateClinicServices(clinicId: string, serviceIds: string[]): Promise<void> {
+    const records = serviceIds.map(serviceId => ({
+      clinic_id: clinicId,
+      service_id: serviceId,
+      is_active: true,
+    }));
+
+    const { error } = await supabase
+      .from('clinic_services')
+      .upsert(records, { onConflict: 'clinic_id,service_id' });
+
+    if (error) throw error;
+  },
+
+  async getSpecialtiesMaster(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('specialties_master')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getClinicSpecializations(clinicId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('clinic_specializations')
+      .select('*, specialties_master(name, description, slug)')
+      .eq('clinic_id', clinicId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async toggleClinicSpecialization(specId: string, isActive: boolean): Promise<void> {
+    const { error } = await supabase
+      .from('clinic_specializations')
+      .update({ is_active: isActive, updated_at: new Date().toISOString() })
+      .eq('id', specId);
+
+    if (error) throw error;
+  },
+
+  async activateClinicSpecialization(clinicId: string, specialtyId: string): Promise<void> {
+    const { data: existing } = await supabase
+      .from('clinic_specializations')
+      .select('id')
+      .eq('clinic_id', clinicId)
+      .eq('specialty_id', specialtyId)
+      .maybeSingle();
+
+    if (existing) {
+      const { error } = await supabase
+        .from('clinic_specializations')
+        .update({ is_active: true, updated_at: new Date().toISOString() })
+        .eq('id', existing.id);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from('clinic_specializations')
+        .insert({ clinic_id: clinicId, specialty_id: specialtyId, is_active: true });
+      if (error) throw error;
+    }
+  },
+
+  async bulkActivateClinicSpecializations(clinicId: string, specialtyIds: string[]): Promise<void> {
+    const records = specialtyIds.map(specialtyId => ({
+      clinic_id: clinicId,
+      specialty_id: specialtyId,
+      is_active: true,
+    }));
+
+    const { error } = await supabase
+      .from('clinic_specializations')
+      .upsert(records, { onConflict: 'clinic_id,specialty_id' });
+
+    if (error) throw error;
+  },
+
+  async getClinicStaff(clinicId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('clinic_staff')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getStaffActivityLog(clinicId: string, limit: number = 100): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('clinic_staff_activity_log')
+      .select('*, clinic_staff(first_name, last_name, role)')
+      .eq('clinic_id', clinicId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async addStaffMember(staffData: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('clinic_staff')
+      .insert(staffData)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    try {
+      await supabase.from('clinic_staff_activity_log').insert({
+        clinic_id: staffData.clinic_id,
+        staff_id: data.id,
+        action: 'staff_added',
+        details: { name: `${staffData.first_name} ${staffData.last_name}`, role: staffData.role },
+      });
+    } catch {}
+
+    return data;
+  },
+
+  async logStaffActivity(clinicId: string, staffId: string, action: string, details?: any): Promise<void> {
+    const { error } = await supabase
+      .from('clinic_staff_activity_log')
+      .insert({ clinic_id: clinicId, staff_id: staffId, action, details });
+
+    if (error) throw error;
+  },
+
+  async updateStaffStatus(staffId: string, status: string): Promise<void> {
+    const { error } = await supabase
+      .from('clinic_staff')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', staffId);
+
+    if (error) throw error;
+  },
+
+  async toggleStaffDuty(staffId: string, isOnDuty: boolean, clinicId: string): Promise<void> {
+    const { error } = await supabase
+      .from('clinic_staff')
+      .update({ is_on_duty: isOnDuty, updated_at: new Date().toISOString() })
+      .eq('id', staffId);
+
+    if (error) throw error;
+
+    try {
+      await supabase.from('clinic_staff_activity_log').insert({
+        clinic_id: clinicId,
+        staff_id: staffId,
+        action: isOnDuty ? 'clock_in' : 'clock_out',
+        details: { timestamp: new Date().toISOString() },
+      });
+    } catch {}
+  },
+
   async getAvailableClinics(): Promise<Clinic[]> {
     const { data, error } = await supabase
       .from('clinics')

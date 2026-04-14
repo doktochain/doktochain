@@ -540,6 +540,227 @@ export const clinicService = {
     if (error) throw error;
   },
 
+  async getClinicPatientById(patientId: string): Promise<any> {
+    const { data, error } = await api.get<any>(`/patients/${patientId}`, {
+      params: { include: 'user_profiles' },
+    });
+    if (error) throw error;
+    return data;
+  },
+
+  async getPatientActiveConsents(patientId: string): Promise<any[]> {
+    const { data, error } = await api.get<any[]>('/patient-consents', {
+      params: { patient_id: patientId, status: 'active' },
+    });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getPatientAppointmentsByProviders(patientId: string, providerIds: string[]): Promise<any[]> {
+    if (providerIds.length === 0) return [];
+    const { data, error } = await api.get<any[]>('/appointments', {
+      params: {
+        patient_id: patientId,
+        provider_id: providerIds,
+        deleted_at: 'null',
+        order: 'appointment_date.desc',
+        include: 'providers',
+      },
+    });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getPatientTransactionsByProviders(userId: string, providerIds: string[]): Promise<any[]> {
+    if (providerIds.length === 0) return [];
+    const { data, error } = await api.get<any[]>('/provider-transactions', {
+      params: {
+        user_id: userId,
+        provider_id: providerIds,
+        order: 'created_at.desc',
+      },
+    });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getPatientLatestVitals(patientId: string): Promise<any> {
+    const { data, error } = await api.get<any>('/vital-signs', {
+      params: {
+        patient_id: patientId,
+        order: 'recorded_at.desc',
+        limit: 1,
+        single: true,
+      },
+    });
+    if (error) throw error;
+    return data;
+  },
+
+  async getMedicalServices(): Promise<any[]> {
+    const { data, error } = await api.get<any[]>('/medical-services', {
+      params: { deleted_at: 'null', order: 'name' },
+    });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getClinicServices(clinicId: string): Promise<any[]> {
+    const { data, error } = await api.get<any[]>('/clinic-services', {
+      params: { clinic_id: clinicId, order: 'created_at.desc', include: 'medical_services' },
+    });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async toggleClinicService(serviceId: string, isActive: boolean): Promise<void> {
+    const { error } = await api.put(`/clinic-services/${serviceId}`, {
+      is_active: isActive,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw error;
+  },
+
+  async activateClinicService(clinicId: string, serviceId: string, customPrice?: number): Promise<void> {
+    const { error } = await api.post('/clinic-services', {
+      clinic_id: clinicId,
+      service_id: serviceId,
+      is_active: true,
+      custom_price: customPrice || null,
+      _upsert: true,
+      _onConflict: 'clinic_id,service_id',
+    });
+    if (error) throw error;
+  },
+
+  async updateClinicServicePrice(serviceId: string, customPrice: number | null): Promise<void> {
+    const { error } = await api.put(`/clinic-services/${serviceId}`, {
+      custom_price: customPrice,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw error;
+  },
+
+  async bulkActivateClinicServices(clinicId: string, serviceIds: string[]): Promise<void> {
+    const records = serviceIds.map(serviceId => ({
+      clinic_id: clinicId,
+      service_id: serviceId,
+      is_active: true,
+    }));
+    const { error } = await api.post('/clinic-services', {
+      _bulk: records,
+      _upsert: true,
+      _onConflict: 'clinic_id,service_id',
+    });
+    if (error) throw error;
+  },
+
+  async getSpecialtiesMaster(): Promise<any[]> {
+    const { data, error } = await api.get<any[]>('/specialties-master', {
+      params: { is_active: true, order: 'display_order.asc' },
+    });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getClinicSpecializations(clinicId: string): Promise<any[]> {
+    const { data, error } = await api.get<any[]>('/clinic-specializations', {
+      params: { clinic_id: clinicId, order: 'created_at.desc', include: 'specialties_master' },
+    });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async toggleClinicSpecialization(specId: string, isActive: boolean): Promise<void> {
+    const { error } = await api.put(`/clinic-specializations/${specId}`, {
+      is_active: isActive,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw error;
+  },
+
+  async activateClinicSpecialization(clinicId: string, specialtyId: string): Promise<void> {
+    const { error } = await api.post('/clinic-specializations', {
+      clinic_id: clinicId,
+      specialty_id: specialtyId,
+      is_active: true,
+      _upsert: true,
+      _onConflict: 'clinic_id,specialty_id',
+    });
+    if (error) throw error;
+  },
+
+  async bulkActivateClinicSpecializations(clinicId: string, specialtyIds: string[]): Promise<void> {
+    const records = specialtyIds.map(specialtyId => ({
+      clinic_id: clinicId,
+      specialty_id: specialtyId,
+      is_active: true,
+    }));
+    const { error } = await api.post('/clinic-specializations', {
+      _bulk: records,
+      _upsert: true,
+      _onConflict: 'clinic_id,specialty_id',
+    });
+    if (error) throw error;
+  },
+
+  async getClinicStaff(clinicId: string): Promise<any[]> {
+    const { data, error } = await api.get<any[]>('/clinic-staff', {
+      params: { clinic_id: clinicId, order: 'created_at.desc' },
+    });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getStaffActivityLog(clinicId: string, limit: number = 100): Promise<any[]> {
+    const { data, error } = await api.get<any[]>('/clinic-staff-activity-log', {
+      params: { clinic_id: clinicId, order: 'created_at.desc', limit, include: 'clinic_staff' },
+    });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async addStaffMember(staffData: any): Promise<any> {
+    const { data, error } = await api.post<any>('/clinic-staff', staffData);
+    if (error) throw error;
+    return data;
+  },
+
+  async logStaffActivity(clinicId: string, staffId: string, action: string, details?: any): Promise<void> {
+    const { error } = await api.post('/clinic-staff-activity-log', {
+      clinic_id: clinicId,
+      staff_id: staffId,
+      action,
+      details,
+    });
+    if (error) throw error;
+  },
+
+  async updateStaffStatus(staffId: string, status: string): Promise<void> {
+    const { error } = await api.put(`/clinic-staff/${staffId}`, {
+      status,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw error;
+  },
+
+  async toggleStaffDuty(staffId: string, isOnDuty: boolean, clinicId: string): Promise<void> {
+    const { error } = await api.put(`/clinic-staff/${staffId}`, {
+      is_on_duty: isOnDuty,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) throw error;
+
+    try {
+      await api.post('/clinic-staff-activity-log', {
+        clinic_id: clinicId,
+        staff_id: staffId,
+        action: isOnDuty ? 'clock_in' : 'clock_out',
+        details: { timestamp: new Date().toISOString() },
+      });
+    } catch {}
+  },
+
   async getAvailableClinics(): Promise<Clinic[]> {
     const { data, error } = await api.get<Clinic[]>('/clinics', {
       params: { is_active: true, is_verified: true, order: 'name' },

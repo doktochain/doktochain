@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { Users, Search, Plus, Eye, X, Clock, Shield, AlertTriangle, CheckCircle, MoreVertical, Activity, Download } from 'lucide-react';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { clinicService, Clinic } from '../../../../services/clinicService';
-import { supabase } from '../../../../lib/supabase';
 
 interface StaffMember {
   id: string;
@@ -68,12 +67,12 @@ export default function ClinicStaffPage() {
       const c = await clinicService.getClinicByOwnerId(user!.id);
       setClinic(c);
       if (c) {
-        const [staffRes, activityRes] = await Promise.all([
-          supabase.from('clinic_staff').select('*').eq('clinic_id', c.id).order('created_at', { ascending: false }),
-          supabase.from('clinic_staff_activity_log').select('*, clinic_staff!clinic_staff_activity_log_staff_id_fkey(first_name, last_name, role)').eq('clinic_id', c.id).order('created_at', { ascending: false }).limit(100),
+        const [staffData, activityData] = await Promise.all([
+          clinicService.getClinicStaff(c.id),
+          clinicService.getStaffActivityLog(c.id, 100),
         ]);
-        setStaff(staffRes.data || []);
-        setActivities((activityRes.data || []).map((a: any) => ({ ...a, staff: a.clinic_staff })));
+        setStaff(staffData || []);
+        setActivities((activityData || []).map((a: any) => ({ ...a, staff: a.clinic_staff })));
       }
     } catch (error) {
       console.error('Error loading staff:', error);
@@ -109,15 +108,9 @@ export default function ClinicStaffPage() {
     if (!clinic) return;
     setSaving(true);
     try {
-      await supabase.from('clinic_staff').insert({
+      await clinicService.addStaffMember({
         clinic_id: clinic.id,
         ...newStaff,
-      });
-      await supabase.from('clinic_staff_activity_log').insert({
-        clinic_id: clinic.id,
-        staff_id: staff[0]?.id || clinic.id,
-        action_type: 'staff_added',
-        action_description: `New staff member ${newStaff.first_name} ${newStaff.last_name} added as ${newStaff.role}`,
       });
       setShowAddModal(false);
       setNewStaff({ first_name: '', last_name: '', email: '', phone: '', role: 'receptionist', department: '', duty_start_time: '09:00', duty_end_time: '17:00', duty_days: [1, 2, 3, 4, 5] });
@@ -131,7 +124,7 @@ export default function ClinicStaffPage() {
 
   const updateStaffStatus = async (staffId: string, status: string) => {
     try {
-      await supabase.from('clinic_staff').update({ status, updated_at: new Date().toISOString() }).eq('id', staffId);
+      await clinicService.updateStaffStatus(staffId, status);
       setActionMenuId(null);
       await loadData();
     } catch (error) {
@@ -141,14 +134,8 @@ export default function ClinicStaffPage() {
 
   const toggleDuty = async (staffId: string, onDuty: boolean) => {
     try {
-      await supabase.from('clinic_staff').update({ is_on_duty: onDuty, updated_at: new Date().toISOString() }).eq('id', staffId);
       if (clinic) {
-        const s = staff.find(x => x.id === staffId);
-        await supabase.from('clinic_staff_activity_log').insert({
-          clinic_id: clinic.id, staff_id: staffId,
-          action_type: onDuty ? 'clock_in' : 'clock_out',
-          action_description: `${s?.first_name} ${s?.last_name} ${onDuty ? 'clocked in' : 'clocked out'}`,
-        });
+        await clinicService.toggleStaffDuty(staffId, onDuty, clinic.id);
       }
       await loadData();
     } catch (error) {

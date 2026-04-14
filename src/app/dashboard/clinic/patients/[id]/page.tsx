@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Phone, MessageSquare, Video, Calendar, Droplets, Heart, Thermometer, Activity, Wind, Scale, User, Mail, Shield, AlertTriangle, DollarSign } from 'lucide-react';
 import { useAuth } from '../../../../../contexts/AuthContext';
 import { clinicService, Clinic } from '../../../../../services/clinicService';
-import { supabase } from '../../../../../lib/supabase';
 
 interface PatientDetail {
   id: string;
@@ -88,14 +87,14 @@ export default function ClinicPatientDetailPage() {
       setClinic(c);
       if (!c) return;
 
-      const [patientRes, consentsRes] = await Promise.all([
-        supabase.from('patients').select(`*, user_profiles!patients_user_id_fkey(first_name, last_name, email, phone, avatar_url)`).eq('id', id!).maybeSingle(),
-        supabase.from('patient_consents').select('*').eq('patient_id', id!).eq('status', 'active'),
+      const [patientData, consentsData] = await Promise.all([
+        clinicService.getClinicPatientById(id!),
+        clinicService.getPatientActiveConsents(id!),
       ]);
 
-      setPatient(patientRes.data);
+      setPatient(patientData);
 
-      const activeConsent = (consentsRes.data || []).some((con: any) =>
+      const activeConsent = (consentsData || []).some((con: any) =>
         !con.expires_at || new Date(con.expires_at) > new Date()
       );
       setConsentActive(activeConsent);
@@ -104,34 +103,16 @@ export default function ClinicPatientDetailPage() {
       const providerIds = affs.filter(a => a.status === 'active').map(a => a.provider_id);
 
       if (providerIds.length > 0) {
-        const [apptRes, txRes] = await Promise.all([
-          supabase
-            .from('appointments')
-            .select(`id, appointment_date, start_time, appointment_type, status, providers!appointments_provider_id_fkey(specialty, user_profiles!providers_user_id_fkey(first_name, last_name))`)
-            .eq('patient_id', id!)
-            .in('provider_id', providerIds)
-            .is('deleted_at', null)
-            .order('appointment_date', { ascending: false }),
-          supabase
-            .from('provider_transactions')
-            .select(`id, amount, currency, status, transaction_type, payment_method, description, service_type, transaction_date, providers:provider_id(user_profiles!providers_user_id_fkey(first_name, last_name))`)
-            .eq('patient_id', patientRes.data?.user_id)
-            .in('provider_id', providerIds)
-            .order('transaction_date', { ascending: false })
-            .limit(50),
+        const [apptData, txData] = await Promise.all([
+          clinicService.getPatientAppointmentsByProviders(id!, providerIds),
+          clinicService.getPatientTransactionsByProviders(patientData?.user_id, providerIds),
         ]);
-        setAppointments((apptRes.data || []) as any[]);
-        setTransactions((txRes.data || []) as any[]);
+        setAppointments(apptData as any[]);
+        setTransactions(txData as any[]);
       }
 
       if (activeConsent) {
-        const { data: vitalData } = await supabase
-          .from('vital_signs')
-          .select('*')
-          .eq('patient_id', id!)
-          .order('recorded_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        const vitalData = await clinicService.getPatientLatestVitals(id!);
         setVitals(vitalData);
       }
     } catch (error) {

@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { ClipboardList, Search, Filter, Plus, MoreVertical, Check, X, Stethoscope, Heart, Eye, Bone, Brain, Baby } from 'lucide-react';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { clinicService, Clinic, ClinicAffiliation } from '../../../../services/clinicService';
-import { supabase } from '../../../../lib/supabase';
 import { Specialty } from '../../../../services/specialtiesService';
 
 interface ClinicSpecializationEntry {
@@ -48,13 +47,13 @@ export default function ClinicSpecializationsPage() {
       const c = await clinicService.getClinicByOwnerId(user!.id);
       setClinic(c);
       if (c) {
-        const [specsRes, clinicSpecsRes, affs] = await Promise.all([
-          supabase.from('specialties_master').select('*').eq('is_active', true).order('display_order'),
-          supabase.from('clinic_specializations').select('*').eq('clinic_id', c.id),
+        const [specsData, clinicSpecsData, affs] = await Promise.all([
+          clinicService.getSpecialtiesMaster(),
+          clinicService.getClinicSpecializations(c.id),
           clinicService.getClinicAffiliations(c.id),
         ]);
-        setAllSpecialties(specsRes.data || []);
-        setClinicSpecs(clinicSpecsRes.data || []);
+        setAllSpecialties(specsData || []);
+        setClinicSpecs(clinicSpecsData || []);
         setAffiliations(affs.filter(a => a.status === 'active'));
       }
     } catch (error) {
@@ -118,14 +117,9 @@ export default function ClinicSpecializationsPage() {
     try {
       const existing = clinicSpecMap.get(specId);
       if (existing) {
-        await supabase.from('clinic_specializations').update({ is_active: activate, updated_at: new Date().toISOString() }).eq('id', existing.id);
+        await clinicService.toggleClinicSpecialization(existing.id, activate);
       } else {
-        await supabase.from('clinic_specializations').insert({
-          clinic_id: clinic.id,
-          specialty_id: specId,
-          is_active: true,
-          provider_count: providerCountBySpecialty[specId] || 0,
-        });
+        await clinicService.activateClinicSpecialization(clinic.id, specId);
       }
       await loadData();
     } catch (error) {
@@ -140,13 +134,7 @@ export default function ClinicSpecializationsPage() {
     if (!clinic) return;
     setSaving('bulk');
     try {
-      const inserts = specIds.map(sid => ({
-        clinic_id: clinic.id,
-        specialty_id: sid,
-        is_active: true,
-        provider_count: providerCountBySpecialty[sid] || 0,
-      }));
-      await supabase.from('clinic_specializations').upsert(inserts, { onConflict: 'clinic_id,specialty_id' });
+      await clinicService.bulkActivateClinicSpecializations(clinic.id, specIds);
       await loadData();
     } catch (error) {
       console.error('Error bulk activating:', error);

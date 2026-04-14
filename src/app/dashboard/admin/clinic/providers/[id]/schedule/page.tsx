@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Calendar, Clock, Plus, CreditCard as Edit, Trash2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '../../../../../../../lib/supabase';
+import { adminCRUDService } from '../../../../../../../services/adminCRUDService';
 import { ConfirmDialog } from '../../../../../../../components/ui/confirm-dialog';
 
 interface ScheduleSlot {
@@ -32,13 +32,7 @@ export default function ProviderSchedulePage() {
 
   const loadProviderData = async () => {
     try {
-      const { data, error } = await supabase
-        .from('providers')
-        .select('*, user_profiles(first_name, last_name, email)')
-        .eq('id', id)
-        .single();
-
-      if (error) throw error;
+      const data = await adminCRUDService.getById('providers', id!);
       setProvider(data);
     } catch (error) {
       console.error('Error loading provider:', error);
@@ -48,15 +42,11 @@ export default function ProviderSchedulePage() {
   const loadSchedules = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('provider_availability')
-        .select('*')
-        .eq('provider_id', id)
-        .order('day_of_week')
-        .order('start_time');
-
-      if (error) throw error;
-      setSchedules(data || []);
+      const all = await adminCRUDService.getAll('provider_availability');
+      const filtered = all
+        .filter((s: any) => s.provider_id === id)
+        .sort((a: any, b: any) => a.day_of_week - b.day_of_week || (a.start_time || '').localeCompare(b.start_time || ''));
+      setSchedules(filtered);
     } catch (error) {
       console.error('Error loading schedules:', error);
     } finally {
@@ -66,12 +56,7 @@ export default function ProviderSchedulePage() {
 
   const handleDeleteSchedule = async (scheduleId: string) => {
     try {
-      const { error } = await supabase
-        .from('provider_availability')
-        .delete()
-        .eq('id', scheduleId);
-
-      if (error) throw error;
+      await adminCRUDService.hardDelete('provider_availability', scheduleId);
       loadSchedules();
     } catch (error) {
       console.error('Error deleting schedule:', error);
@@ -250,12 +235,10 @@ function AddScheduleModal({
     setLoading(true);
 
     try {
-      const { error } = await supabase.from('provider_availability').insert({
+      await adminCRUDService.create('provider_availability', {
         provider_id: providerId,
         ...formData,
       });
-
-      if (error) throw error;
       onSuccess();
     } catch (error) {
       console.error('Error adding schedule:', error);

@@ -8,7 +8,7 @@ import AdminDetailView from '../../../../../components/admin/AdminDetailView';
 import AdminStatusBadge from '../../../../../components/admin/AdminStatusBadge';
 import { TableColumn, TableAction } from '../../../../../components/admin/AdminDataTable';
 import { BulkAction } from '../../../../../components/admin/AdminBulkActions';
-import { supabase } from '../../../../../lib/supabase';
+import { adminCRUDService } from '../../../../../services/adminCRUDService';
 import { storageService } from '../../../../../services/storageService';
 
 export default function AdminInsuranceProvidersPage() {
@@ -28,13 +28,8 @@ export default function AdminInsuranceProvidersPage() {
   const loadProviders = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('insurance_providers_master')
-        .select('*')
-        .order('name', { ascending: true });
-
-      if (error) throw error;
-      setProviders(data || []);
+      const data = await adminCRUDService.getAll('insurance_providers_master');
+      setProviders(data);
     } catch (error) {
       console.error('Error loading insurance providers:', error);
     } finally {
@@ -45,21 +40,7 @@ export default function AdminInsuranceProvidersPage() {
   const handleLogoUpload = async (file: File): Promise<string | null> => {
     try {
       setUploading(true);
-      const timestamp = Date.now();
-      const fileName = `${timestamp}-${file.name.replace(/[^a-zA-Z0-9.]/g, '-')}`;
-      const filePath = `insurance-logos/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('user-uploads')
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('user-uploads')
-        .getPublicUrl(filePath);
-
-      return publicUrl;
+      return await storageService.uploadFile(file, 'user-uploads', 'insurance-logos');
     } catch (error) {
       console.error('Error uploading logo:', error);
       return null;
@@ -76,7 +57,7 @@ export default function AdminInsuranceProvidersPage() {
         logoUrl = await handleLogoUpload(data.logo_file);
       }
 
-      const { error } = await supabase.from('insurance_providers_master').insert({
+      await adminCRUDService.create('insurance_providers_master', {
         name: data.name,
         slug: data.slug,
         logo_url: logoUrl,
@@ -88,8 +69,6 @@ export default function AdminInsuranceProvidersPage() {
         provinces_covered: data.provinces_covered ? data.provinces_covered.split(',').map((p: string) => p.trim()) : [],
         is_active: data.is_active !== false,
       });
-
-      if (error) throw error;
 
       setShowCreateModal(false);
       loadProviders();
@@ -108,23 +87,18 @@ export default function AdminInsuranceProvidersPage() {
         logoUrl = await handleLogoUpload(data.logo_file);
       }
 
-      const { error } = await supabase
-        .from('insurance_providers_master')
-        .update({
-          name: data.name,
-          slug: data.slug,
-          logo_url: logoUrl,
-          provider_type: data.provider_type || 'private',
-          description: data.description || null,
-          contact_phone: data.contact_phone || null,
-          contact_email: data.contact_email || null,
-          website_url: data.website_url || null,
-          provinces_covered: data.provinces_covered ? data.provinces_covered.split(',').map((p: string) => p.trim()) : [],
-          is_active: data.is_active !== false,
-        })
-        .eq('id', selectedProvider.id);
-
-      if (error) throw error;
+      await adminCRUDService.update('insurance_providers_master', selectedProvider.id, {
+        name: data.name,
+        slug: data.slug,
+        logo_url: logoUrl,
+        provider_type: data.provider_type || 'private',
+        description: data.description || null,
+        contact_phone: data.contact_phone || null,
+        contact_email: data.contact_email || null,
+        website_url: data.website_url || null,
+        provinces_covered: data.provinces_covered ? data.provinces_covered.split(',').map((p: string) => p.trim()) : [],
+        is_active: data.is_active !== false,
+      }, selectedProvider);
 
       setShowEditModal(false);
       setSelectedProvider(null);
@@ -138,12 +112,7 @@ export default function AdminInsuranceProvidersPage() {
 
   const handleDeleteProvider = async () => {
     try {
-      const { error } = await supabase
-        .from('insurance_providers_master')
-        .delete()
-        .eq('id', selectedProvider.id);
-
-      if (error) throw error;
+      await adminCRUDService.softDelete('insurance_providers_master', selectedProvider.id);
 
       setShowDeleteModal(false);
       setSelectedProvider(null);
@@ -157,12 +126,7 @@ export default function AdminInsuranceProvidersPage() {
 
   const handleBulkDelete = async (ids: string[]) => {
     try {
-      const { error } = await supabase
-        .from('insurance_providers_master')
-        .delete()
-        .in('id', ids);
-
-      if (error) throw error;
+      await adminCRUDService.bulkDelete('insurance_providers_master', ids, true);
 
       loadProviders();
       toast.success('Insurance providers deleted successfully!');

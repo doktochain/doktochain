@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Store, Edit, Trash2, Eye, CheckCircle, Package, Shield } from 'lucide-react';
+import { Store, CreditCard as Edit, Trash2, Eye, CheckCircle, Package, Shield } from 'lucide-react';
 import AdminCRUDTemplate from '../../../../../components/admin/AdminCRUDTemplate';
 import AdminFormModal, { FormField } from '../../../../../components/admin/AdminFormModal';
 import AdminDeleteConfirmation from '../../../../../components/admin/AdminDeleteConfirmation';
@@ -7,7 +7,6 @@ import AdminDetailView from '../../../../../components/admin/AdminDetailView';
 import AdminStatusBadge from '../../../../../components/admin/AdminStatusBadge';
 import { TableColumn, TableAction } from '../../../../../components/admin/AdminDataTable';
 import { BulkAction } from '../../../../../components/admin/AdminBulkActions';
-import { supabase } from '../../../../../lib/supabase';
 import { adminCRUDService } from '../../../../../services/adminCRUDService';
 
 const PROVINCES = [
@@ -50,14 +49,8 @@ export default function AdminPharmaciesPage() {
   const loadPharmacies = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('pharmacies')
-        .select('*, user_profiles(first_name, last_name, email)')
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setPharmacies(data || []);
+      const data = await adminCRUDService.getAll('pharmacies');
+      setPharmacies(data);
     } catch (error) {
       console.error('Error loading pharmacies:', error);
     } finally {
@@ -67,22 +60,16 @@ export default function AdminPharmaciesPage() {
 
   const loadPharmacyDetails = async (pharmacyId: string) => {
     try {
-      const [ordersRes, inventoryRes] = await Promise.all([
-        supabase
-          .from('pharmacy_orders')
-          .select('id, status, total_amount, created_at, user_profiles(first_name, last_name)')
-          .eq('pharmacy_id', pharmacyId)
-          .order('created_at', { ascending: false })
-          .limit(10),
-        supabase
-          .from('pharmacy_inventory')
-          .select('id, medication_name, quantity, unit_price, reorder_level, status')
-          .eq('pharmacy_id', pharmacyId)
-          .order('medication_name', { ascending: true })
-          .limit(20),
+      const [orders, inventory] = await Promise.all([
+        adminCRUDService.getAll('pharmacy_orders').then(all =>
+          all.filter(o => o.pharmacy_id === pharmacyId).slice(0, 10)
+        ),
+        adminCRUDService.getAll('pharmacy_inventory').then(all =>
+          all.filter(i => i.pharmacy_id === pharmacyId).slice(0, 20)
+        ),
       ]);
-      setPharmacyOrders(ordersRes.data || []);
-      setPharmacyInventory(inventoryRes.data || []);
+      setPharmacyOrders(orders);
+      setPharmacyInventory(inventory);
     } catch {
       setPharmacyOrders([]);
       setPharmacyInventory([]);
@@ -123,7 +110,7 @@ export default function AdminPharmaciesPage() {
 
   const handleVerifyPharmacy = async (pharmacyId: string) => {
     try {
-      await supabase.from('pharmacies').update({ is_verified: true }).eq('id', pharmacyId);
+      await adminCRUDService.update('pharmacies', pharmacyId, { is_verified: true });
       loadPharmacies();
     } catch (error) {
       console.error('Error verifying pharmacy:', error);

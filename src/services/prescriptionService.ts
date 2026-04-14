@@ -512,6 +512,64 @@ export const prescriptionService = {
     return data;
   },
 
+  async getPatientRefillRequests(patientId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('prescription_refill_requests')
+      .select(`
+        *,
+        prescriptions(
+          id, prescription_number, prescription_date, status, provider_id,
+          prescription_items(medication_name, strength, dosage_form, quantity, refills_remaining),
+          providers(*, user_profiles(first_name, last_name))
+        )
+      `)
+      .eq('patient_id', patientId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getPatientRefillablePrescriptions(patientId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('prescriptions')
+      .select(`
+        id, prescription_number, prescription_date, status, provider_id,
+        prescription_items(medication_name, strength, dosage_form, quantity, refills_remaining, refills_allowed),
+        providers(*, user_profiles(first_name, last_name))
+      `)
+      .eq('patient_id', patientId)
+      .in('status', ['filled', 'sent'])
+      .order('prescription_date', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async createRefillRequest(data: { prescription_id: string; patient_id: string; provider_id: string; notes?: string }): Promise<any> {
+    const { data: result, error } = await supabase
+      .from('prescription_refill_requests')
+      .insert({
+        prescription_id: data.prescription_id,
+        patient_id: data.patient_id,
+        provider_id: data.provider_id,
+        notes: data.notes || null,
+        status: 'pending',
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    try {
+      await auditLog.dataAccessed('prescription_refill_request', result.id, data.patient_id, 'patient', {
+        action: 'refill_requested', prescription_id: data.prescription_id,
+      });
+    } catch {}
+
+    return result;
+  },
+
   async denyRefill(refillId: string, reason: string, deniedBy?: string): Promise<any> {
     const { data, error } = await supabase
       .from('prescription_refills')

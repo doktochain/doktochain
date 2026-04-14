@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { Stethoscope, Search, Filter, Plus, MoreVertical, Check, X, Download, ArrowUpDown } from 'lucide-react';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { clinicService, Clinic } from '../../../../services/clinicService';
-import { supabase } from '../../../../lib/supabase';
 import { MedicalService } from '../../../../services/medicalServicesService';
 
 interface ClinicServiceEntry {
@@ -40,12 +39,12 @@ export default function ClinicServicesPage() {
       const c = await clinicService.getClinicByOwnerId(user!.id);
       setClinic(c);
       if (c) {
-        const [servicesRes, clinicServRes] = await Promise.all([
-          supabase.from('medical_services').select('*').is('deleted_at', null).order('service_name'),
-          supabase.from('clinic_services').select('*, medical_services(*)').eq('clinic_id', c.id),
+        const [servicesData, clinicServData] = await Promise.all([
+          clinicService.getMedicalServices(),
+          clinicService.getClinicServices(c.id),
         ]);
-        setAllServices(servicesRes.data || []);
-        setClinicServices(clinicServRes.data || []);
+        setAllServices(servicesData || []);
+        setClinicServices(clinicServData || []);
       }
     } catch (error) {
       console.error('Error loading services:', error);
@@ -98,9 +97,9 @@ export default function ClinicServicesPage() {
     try {
       const existing = clinicServiceMap.get(serviceId);
       if (existing) {
-        await supabase.from('clinic_services').update({ is_active: activate, updated_at: new Date().toISOString() }).eq('id', existing.id);
+        await clinicService.toggleClinicService(existing.id, activate);
       } else {
-        await supabase.from('clinic_services').insert({ clinic_id: clinic.id, service_id: serviceId, is_active: true });
+        await clinicService.activateClinicService(clinic.id, serviceId);
       }
       await loadData();
     } catch (error) {
@@ -115,7 +114,7 @@ export default function ClinicServicesPage() {
     if (!clinic) return;
     const existing = clinicServiceMap.get(serviceId);
     if (existing) {
-      await supabase.from('clinic_services').update({ custom_price: price, updated_at: new Date().toISOString() }).eq('id', existing.id);
+      await clinicService.updateClinicServicePrice(existing.id, price);
       await loadData();
     }
   };
@@ -140,8 +139,7 @@ export default function ClinicServicesPage() {
     if (!clinic) return;
     setSaving('bulk');
     try {
-      const inserts = serviceIds.map(sid => ({ clinic_id: clinic.id, service_id: sid, is_active: true }));
-      await supabase.from('clinic_services').upsert(inserts, { onConflict: 'clinic_id,service_id' });
+      await clinicService.bulkActivateClinicServices(clinic.id, serviceIds);
       await loadData();
     } catch (error) {
       console.error('Error bulk activating:', error);

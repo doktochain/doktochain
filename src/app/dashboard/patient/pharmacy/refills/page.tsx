@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../../../../contexts/AuthContext';
-import { supabase } from '../../../../../lib/supabase';
 import { patientService } from '../../../../../services/patientService';
+import { prescriptionService } from '../../../../../services/prescriptionService';
 import { Pill, Clock, CheckCircle, AlertCircle, Calendar, Plus, X, Loader2, Send } from 'lucide-react';
 
 interface RefillRequest {
@@ -52,28 +52,11 @@ export default function RefillRequestsPage() {
       return;
     }
 
-    const { data, error } = await supabase
-      .from('prescription_refill_requests')
-      .select(`
-        *,
-        prescription:prescription_id (
-          prescription_number,
-          prescription_date,
-          providers:provider_id (
-            user_profiles:user_id (first_name, last_name)
-          ),
-          prescription_items (
-            medication_name,
-            strength,
-            refills_remaining
-          )
-        )
-      `)
-      .eq('patient_id', patient.id)
-      .order('requested_at', { ascending: false });
-
-    if (!error && data) {
+    try {
+      const data = await prescriptionService.getPatientRefillRequests(patient.id);
       setRefillRequests(data);
+    } catch (error) {
+      console.error('Error loading refill requests:', error);
     }
     setLoading(false);
   };
@@ -83,26 +66,12 @@ export default function RefillRequestsPage() {
     const patient = await patientService.getPatientByUserId(user.id);
     if (!patient) return;
 
-    const { data } = await supabase
-      .from('prescriptions')
-      .select(`
-        id,
-        prescription_number,
-        prescription_date,
-        providers:provider_id (
-          user_profiles:user_id (first_name, last_name)
-        ),
-        prescription_items (
-          medication_name,
-          strength,
-          refills_remaining
-        )
-      `)
-      .eq('patient_id', patient.id)
-      .in('status', ['filled', 'sent'])
-      .order('prescription_date', { ascending: false });
-
-    if (data) setPrescriptions(data);
+    try {
+      const data = await prescriptionService.getPatientRefillablePrescriptions(patient.id);
+      setPrescriptions(data);
+    } catch (error) {
+      console.error('Error loading prescriptions:', error);
+    }
   };
 
   const getStatusConfig = (status: string) => {
@@ -295,14 +264,13 @@ export default function RefillRequestsPage() {
             if (!patient) return;
 
             const prescription = prescriptions.find((p: any) => p.id === prescriptionId);
-            const providerId = prescription?.providers?.user_profiles ? prescription.providers.id : null;
+            const providerId = prescription?.providers?.id || prescription?.provider_id || null;
 
-            await supabase.from('prescription_refill_requests').insert({
+            await prescriptionService.createRefillRequest({
               prescription_id: prescriptionId,
               patient_id: patient.id,
               provider_id: providerId,
-              request_reason: reason,
-              status: 'pending',
+              notes: reason,
             });
 
             setShowNewRequest(false);

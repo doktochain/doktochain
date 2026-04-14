@@ -444,6 +444,51 @@ export const prescriptionService = {
     return data!;
   },
 
+  async getPatientRefillRequests(patientId: string): Promise<any[]> {
+    const { data, error } = await api.get<any[]>('/prescription-refill-requests', {
+      params: {
+        patient_id: patientId,
+        order: 'created_at.desc',
+        include: 'prescriptions,prescription_items,providers',
+      },
+    });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getPatientRefillablePrescriptions(patientId: string): Promise<any[]> {
+    const { data, error } = await api.get<any[]>('/prescriptions', {
+      params: {
+        patient_id: patientId,
+        status: ['filled', 'sent'],
+        order: 'prescription_date.desc',
+        include: 'prescription_items,providers',
+      },
+    });
+    if (error) throw error;
+    return data || [];
+  },
+
+  async createRefillRequest(reqData: { prescription_id: string; patient_id: string; provider_id: string; notes?: string }): Promise<any> {
+    const { data, error } = await api.post<any>('/prescription-refill-requests', {
+      prescription_id: reqData.prescription_id,
+      patient_id: reqData.patient_id,
+      provider_id: reqData.provider_id,
+      notes: reqData.notes || null,
+      status: 'pending',
+    });
+
+    if (error) throw error;
+
+    try {
+      await auditLog.dataAccessed('prescription_refill_request', data!.id, reqData.patient_id, 'patient', {
+        action: 'refill_requested', prescription_id: reqData.prescription_id,
+      });
+    } catch {}
+
+    return data;
+  },
+
   async denyRefill(refillId: string, reason: string, deniedBy?: string): Promise<any> {
     const { data, error } = await api.put<any>(`/prescription-refills/${refillId}`, {
       status: 'denied',

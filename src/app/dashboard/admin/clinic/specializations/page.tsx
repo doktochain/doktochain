@@ -8,7 +8,6 @@ import AdminDetailView from '../../../../../components/admin/AdminDetailView';
 import AdminStatusBadge from '../../../../../components/admin/AdminStatusBadge';
 import { TableColumn, TableAction } from '../../../../../components/admin/AdminDataTable';
 import { BulkAction } from '../../../../../components/admin/AdminBulkActions';
-import { supabase } from '../../../../../lib/supabase';
 import { adminCRUDService } from '../../../../../services/adminCRUDService';
 
 export default function AdminSpecializationsPage() {
@@ -27,13 +26,8 @@ export default function AdminSpecializationsPage() {
   const loadSpecializations = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('specialties_master')
-        .select('*')
-        .order('name', { ascending: true });
-
-      if (error) throw error;
-      setSpecializations(data || []);
+      const data = await adminCRUDService.getAll('specialties_master');
+      setSpecializations(data);
     } catch (error) {
       console.error('Error loading specializations:', error);
     } finally {
@@ -43,7 +37,7 @@ export default function AdminSpecializationsPage() {
 
   const handleCreateSpecialization = async (data: any) => {
     try {
-      const { error } = await supabase.from('specialties_master').insert({
+      await adminCRUDService.create('specialties_master', {
         name: data.name,
         slug: data.slug,
         description: data.description,
@@ -52,8 +46,6 @@ export default function AdminSpecializationsPage() {
         icon: data.icon || null,
         is_active: data.is_active !== false,
       });
-
-      if (error) throw error;
 
       setShowCreateModal(false);
       loadSpecializations();
@@ -66,20 +58,15 @@ export default function AdminSpecializationsPage() {
 
   const handleUpdateSpecialization = async (data: any) => {
     try {
-      const { error } = await supabase
-        .from('specialties_master')
-        .update({
-          name: data.name,
-          slug: data.slug,
-          description: data.description,
-          long_description: data.long_description || null,
-          category: data.category || null,
-          icon: data.icon || null,
-          is_active: data.is_active !== false,
-        })
-        .eq('id', selectedSpecialization.id);
-
-      if (error) throw error;
+      await adminCRUDService.update('specialties_master', selectedSpecialization.id, {
+        name: data.name,
+        slug: data.slug,
+        description: data.description,
+        long_description: data.long_description || null,
+        category: data.category || null,
+        icon: data.icon || null,
+        is_active: data.is_active !== false,
+      }, selectedSpecialization);
 
       setShowEditModal(false);
       setSelectedSpecialization(null);
@@ -93,12 +80,7 @@ export default function AdminSpecializationsPage() {
 
   const handleDeleteSpecialization = async () => {
     try {
-      const { error } = await supabase
-        .from('specialties_master')
-        .delete()
-        .eq('id', selectedSpecialization.id);
-
-      if (error) throw error;
+      await adminCRUDService.softDelete('specialties_master', selectedSpecialization.id);
 
       setShowDeleteModal(false);
       setSelectedSpecialization(null);
@@ -110,13 +92,7 @@ export default function AdminSpecializationsPage() {
 
   const handleBulkDelete = async (ids: string[]) => {
     try {
-      const { error } = await supabase
-        .from('specialties_master')
-        .delete()
-        .in('id', ids);
-
-      if (error) throw error;
-
+      await adminCRUDService.bulkDelete('specialties_master', ids, true);
       loadSpecializations();
     } catch (error) {
       console.error('Error bulk deleting:', error);
