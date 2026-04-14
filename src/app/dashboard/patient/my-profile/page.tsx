@@ -273,7 +273,7 @@ export default function MyProfile() {
       title: 'Remove Allergy',
       description: 'Remove this allergy?',
       onConfirm: async () => {
-        await patientService.deleteAllergy(id);
+        await patientService.deleteAllergy(id, patient! .id);
         setAllergies(prev => prev.filter(a => a.id !== id));
         setConfirmDialogOpen(false);
       },
