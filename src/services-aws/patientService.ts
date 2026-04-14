@@ -112,28 +112,24 @@ export const patientService = {
   },
 
   async getCurrentMedications(patientId: string): Promise<PatientMedication[]> {
-    const { data, error } = await api.get<PatientMedication[]>('/patient-medications', {
-      params: { patient_id: patientId, is_active: 'true', order: 'start_date.desc' },
+    const { data, error } = await api.get<PatientMedication[]>(`/patients/${patientId}/medications`, {
+      params: { active: 'true' },
     });
-
     if (error) throw new Error(error.message);
     return data || [];
   },
 
   async addMedication(patientId: string, medicationData: Partial<PatientMedication>): Promise<PatientMedication> {
-    const { data, error } = await api.post<PatientMedication>('/patient-medications', {
+    const { data, error } = await api.post<PatientMedication>(`/patients/${patientId}/medications`, {
       ...medicationData,
-      patient_id: patientId,
       is_active: true,
     });
-
     if (error) throw new Error(error.message);
     return data!;
   },
 
   async updateMedication(medicationId: string, updates: Partial<PatientMedication>): Promise<PatientMedication> {
     const { data, error } = await api.put<PatientMedication>(`/patient-medications/${medicationId}`, updates);
-
     if (error) throw new Error(error.message);
     return data!;
   },
