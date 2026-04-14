@@ -74,18 +74,14 @@ export const patientService = {
   },
 
   async getAllergies(patientId: string): Promise<PatientAllergy[]> {
-    const { data, error } = await api.get<PatientAllergy[]>('/patient-allergies', {
-      params: { patient_id: patientId, order: 'created_at.desc' },
-    });
-
+    const { data, error } = await api.get<PatientAllergy[]>(`/patients/${patientId}/allergies`);
     if (error) throw new Error(error.message);
     return data || [];
   },
 
   async addAllergy(patientId: string, allergyData: Partial<PatientAllergy>): Promise<PatientAllergy> {
-    const { data, error } = await api.post<PatientAllergy>('/patient-allergies', {
+    const { data, error } = await api.post<PatientAllergy>(`/patients/${patientId}/allergies`, {
       ...allergyData,
-      patient_id: patientId,
     });
 
     if (error) throw new Error(error.message);
@@ -105,9 +101,8 @@ export const patientService = {
     return data!;
   },
 
-  async deleteAllergy(allergyId: string): Promise<void> {
-    const { error } = await api.delete(`/patient-allergies/${allergyId}`);
-
+  async deleteAllergy(allergyId: string, patientId: string): Promise<void> {
+    const { error } = await api.delete(`/patients/${patientId}/allergies/${allergyId}`);
     if (error) throw new Error(error.message);
   },
 
@@ -135,20 +130,15 @@ export const patientService = {
   },
 
   async getEmergencyContacts(patientId: string): Promise<EmergencyContact[]> {
-    const { data, error } = await api.get<EmergencyContact[]>('/emergency-contacts', {
-      params: { patient_id: patientId, order: 'is_primary.desc' },
-    });
-
+    const { data, error } = await api.get<EmergencyContact[]>(`/patients/${patientId}/emergency-contacts`);
     if (error) throw new Error(error.message);
     return data || [];
   },
 
   async addEmergencyContact(patientId: string, contactData: Partial<EmergencyContact>): Promise<EmergencyContact> {
-    const { data, error } = await api.post<EmergencyContact>('/emergency-contacts', {
+    const { data, error } = await api.post<EmergencyContact>(`/patients/${patientId}/emergency-contacts`, {
       ...contactData,
-      patient_id: patientId,
     });
-
     if (error) throw new Error(error.message);
     return data!;
   },
