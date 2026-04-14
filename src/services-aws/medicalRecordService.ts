@@ -86,7 +86,9 @@ export const medicalRecordService = {
       params.record_type = recordType;
     }
 
-    const { data, error } = await api.get<MedicalRecord[]>('/medical-records', { params });
+    const { data, error } = await api.get<MedicalRecord[]>(`/health-records/patient/${patientId}`, {
+  params: recordType ? { record_type: recordType } : undefined,
+});
 
     if (error) throw new Error(error.message);
 
