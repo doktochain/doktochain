@@ -7,7 +7,6 @@ import AdminDetailView from '../../../../../components/admin/AdminDetailView';
 import AdminStatusBadge from '../../../../../components/admin/AdminStatusBadge';
 import { TableColumn, TableAction } from '../../../../../components/admin/AdminDataTable';
 import { BulkAction } from '../../../../../components/admin/AdminBulkActions';
-import { supabase } from '../../../../../lib/supabase';
 import { adminCRUDService } from '../../../../../services/adminCRUDService';
 
 export default function AdminProceduresPage() {
@@ -23,58 +22,12 @@ export default function AdminProceduresPage() {
   useEffect(() => {
     loadProcedures();
     loadSpecialties();
-
-    // Set up real-time subscription for procedures
-    const proceduresChannel = supabase
-      .channel('procedures_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'procedures_master',
-        },
-        (payload) => {
-          console.log('Procedures change detected:', payload);
-          loadProcedures();
-        }
-      )
-      .subscribe();
-
-    // Set up real-time subscription for specialties
-    const specialtiesChannel = supabase
-      .channel('specialties_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'specialties_master',
-        },
-        (payload) => {
-          console.log('Specialties change detected:', payload);
-          loadSpecialties();
-        }
-      )
-      .subscribe();
-
-    // Cleanup subscriptions on unmount
-    return () => {
-      supabase.removeChannel(proceduresChannel);
-      supabase.removeChannel(specialtiesChannel);
-    };
   }, []);
-
+  
   const loadSpecialties = async () => {
     try {
-      const { data, error } = await supabase
-        .from('specialties_master')
-        .select('id, name')
-        .eq('is_active', true)
-        .order('name');
-
-      if (error) throw error;
-      setSpecialties(data || []);
+      const data = await adminCRUDService.getAll('specialties_master');
+      setSpecialties(data.filter((s: any) => s.is_active !== false));
     } catch (error) {
       console.error('Error loading specialties:', error);
     }
@@ -83,13 +36,8 @@ export default function AdminProceduresPage() {
   const loadProcedures = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('procedures_master')
-        .select('*, specialties_master(name)')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setProcedures(data || []);
+      const data = await adminCRUDService.getAll('procedures_master');
+      setProcedures(data);
     } catch (error) {
       console.error('Error loading procedures:', error);
     } finally {
