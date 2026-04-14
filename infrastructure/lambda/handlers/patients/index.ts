@@ -91,6 +91,45 @@ router.put('/profile/:id', async (event, params) => {
   return success(data, origin);
 });
 
+router.get('/', async (event) => {
+  const origin = getOrigin(event.headers);
+  const user = requireAuth(event);
+  
+  const result = await withRLS(user.userId, user.role, user.claims, async (client) => {
+    const r = await client.query(
+      `SELECT p.*, up.first_name, up.last_name, up.email, up.phone,
+              up.date_of_birth, up.gender, up.profile_photo_url,
+              up.address_line1, up.city, up.province, up.postal_code
+       FROM patients p
+       JOIN user_profiles up ON p.user_id = up.id
+       WHERE p.user_id = $1 LIMIT 1`,
+      [user.userId]
+    );
+    return r.rows[0] || null;
+  });
+  
+  return success(result, origin);
+});
+
+router.post('/', async (event) => {
+  const origin = getOrigin(event.headers);
+  const user = requireAuth(event);
+  const body = parseBody<any>(event.body);
+  
+  const result = await withRLS(user.userId, user.role, user.claims, async (client) => {
+    const r = await client.query(
+      `INSERT INTO patients (user_id, ${Object.keys(body).join(', ')})
+       VALUES ($1, ${Object.keys(body).map((_, i) => `$${i + 2}`).join(', ')})
+       ON CONFLICT (user_id) DO UPDATE SET ${Object.keys(body).map((k, i) => `${k} = $${i + 2}`).join(', ')}
+       RETURNING *`,
+      [user.userId, ...Object.values(body)]
+    );
+    return r.rows[0];
+  });
+  
+  return success(result, origin);
+});
+
 router.get('/:id/allergies', async (event, params) => {
   const origin = getOrigin(event.headers);
   const user = requireAuth(event);
