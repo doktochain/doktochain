@@ -251,7 +251,7 @@ router.put('/me', async (event) => {
     'first_name', 'last_name', 'phone', 'date_of_birth',
     'gender', 'address_line1', 'address_line2', 'city',
     'province', 'postal_code', 'country', 'profile_photo_url',
-    'language_preference',
+    'language_preference', 'profile_completed',
   ];
 
   const updates: string[] = [];
