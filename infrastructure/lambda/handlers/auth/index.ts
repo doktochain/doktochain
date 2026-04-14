@@ -228,6 +228,61 @@ router.get('/me', async (event) => {
   return success(data, origin);
 });
 
+router.put('/me', async (event) => {
+  const origin = getOrigin(event.headers);
+
+  const authHeader = event.headers.Authorization || event.headers.authorization;
+  if (!authHeader) return badRequest('Authorization header required', origin);
+
+  const token = authHeader.replace('Bearer ', '');
+
+  let userId: string;
+  try {
+    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+    userId = payload.sub;
+    if (!userId) throw new Error('No sub');
+  } catch {
+    return badRequest('Invalid token', origin);
+  }
+
+  const body = parseBody<Record<string, unknown>>(event.body);
+
+  const allowedFields = [
+    'first_name', 'last_name', 'phone', 'date_of_birth',
+    'gender', 'address_line1', 'address_line2', 'city',
+    'province', 'postal_code', 'country', 'profile_photo_url',
+    'language_preference',
+  ];
+
+  const updates: string[] = [];
+  const values: unknown[] = [];
+  let paramIndex = 1;
+
+  for (const field of allowedFields) {
+    if (body[field] !== undefined) {
+      updates.push(`${field} = $${paramIndex}`);
+      values.push(body[field]);
+      paramIndex++;
+    }
+  }
+
+  if (updates.length === 0) return badRequest('No valid fields to update', origin);
+
+  values.push(userId);
+
+  const data = await withServiceRole(async (client) => {
+    const result = await client.query(
+      `UPDATE user_profiles SET ${updates.join(', ')}, updated_at = now()
+       WHERE id = $${paramIndex}
+       RETURNING *`,
+      values
+    );
+    return result.rows[0];
+  });
+
+  return success(data, origin);
+});
+
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   return router.handle(event);
 };
