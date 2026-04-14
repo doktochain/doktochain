@@ -268,6 +268,48 @@ router.get('/:id/insurance-cards', async (event, params) => {
   return success(data, origin);
 });
 
+router.put('/:id', async (event, params) => {
+  const origin = getOrigin(event.headers);
+  const user = requireAuth(event);
+  const body = parseBody<Record<string, unknown>>(event.body);
+
+  const allowedFields = [
+    'health_card_number', 'health_card_province', 'health_card_expiry',
+    'blood_type', 'height_cm', 'weight_kg', 'medical_history',
+    'chronic_conditions', 'first_name', 'last_name', 'phone',
+    'date_of_birth', 'gender', 'address_line1', 'address_line2',
+    'city', 'province', 'postal_code', 'country',
+  ];
+
+  const updates: string[] = [];
+  const values: unknown[] = [];
+  let paramIndex = 1;
+
+  for (const field of allowedFields) {
+    if (body[field] !== undefined) {
+      updates.push(`${field} = $${paramIndex}`);
+      values.push(body[field]);
+      paramIndex++;
+    }
+  }
+
+  if (updates.length === 0) return badRequest('No valid fields to update', origin);
+
+  values.push(params.id);
+
+  const data = await withRLS(user.userId, user.role, user.claims, async (client) => {
+    const result = await client.query(
+      `UPDATE patients SET ${updates.join(', ')}, updated_at = now()
+       WHERE id = $${paramIndex}
+       RETURNING *`,
+      values
+    );
+    return result.rows[0];
+  });
+
+  return success(data, origin);
+});
+
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   return router.handle(event);
 };
