@@ -155,12 +155,12 @@ router.post('/', async (event) => {
     const result = await client.query(
       `INSERT INTO appointments
        (patient_id, provider_id, location_id, appointment_date, start_time, end_time,
-        appointment_type, visit_type, reason_for_visit, notes, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'scheduled')
+        appointment_type, visit_type, reason_for_visit, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'scheduled')
        RETURNING *`,
       [patientId, body.provider_id, body.location_id, body.appointment_date,
        body.start_time, body.end_time, appointmentType, visitType,
-       body.reason_for_visit, body.notes]
+       body.reason_for_visit]
     );
 
     const appointment = result.rows[0];
@@ -191,7 +191,7 @@ router.put('/:id', async (event, params) => {
 
   const allowedFields = [
     'status', 'appointment_date', 'start_time', 'end_time',
-    'reason_for_visit', 'notes', 'cancellation_reason', 'payment_status',
+    'reason_for_visit', 'chief_complaint', 'cancellation_reason',
   ];
 
   const updates: string[] = [];
