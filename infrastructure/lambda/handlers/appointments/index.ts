@@ -78,7 +78,7 @@ router.get('/:id', async (event, params) => {
       `SELECT a.*,
         json_build_object(
           'id', prov.id, 'first_name', pup.first_name, 'last_name', pup.last_name,
-          'profile_photo_url', pup.profile_photo_url, 'consultation_fee', prov.consultation_fee
+          'profile_photo_url', pup.profile_photo_url
         ) as provider,
         json_build_object(
           'id', pat.id, 'first_name', patup.first_name, 'last_name', patup.last_name,
