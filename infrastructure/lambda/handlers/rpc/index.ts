@@ -1,6 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { extractUser } from '../../shared/auth';
-import { withRLS } from '../../shared/db';
+import { withRLS, withServiceRole } from '../../shared/db';
 import {
   success, badRequest, error,
   parseBody, getOrigin,
@@ -46,6 +46,117 @@ const RPC_HANDLERS: Record<string, (client: any, params: any) => Promise<any>> =
       [user_id, permission_name]
     );
     return { has_permission: result.rows[0]?.has_permission || false };
+  },
+
+  fix_db_triggers: async (_client, _params) => {
+    return await withServiceRole(async (svc) => {
+      await svc.query(`
+        CREATE OR REPLACE FUNCTION notify_appointment_created()
+        RETURNS TRIGGER AS $$
+        DECLARE
+          patient_user_id uuid;
+          provider_user_id uuid;
+          provider_name text;
+          patient_name text;
+        BEGIN
+          SELECT user_id INTO patient_user_id FROM patients WHERE id = NEW.patient_id;
+          SELECT p.user_id, up.first_name || ' ' || up.last_name
+          INTO provider_user_id, provider_name
+          FROM providers p LEFT JOIN user_profiles up ON p.user_id = up.id
+          WHERE p.id = NEW.provider_id;
+          SELECT up.first_name || ' ' || up.last_name INTO patient_name
+          FROM patients p LEFT JOIN user_profiles up ON p.user_id = up.id
+          WHERE p.id = NEW.patient_id;
+
+          IF patient_user_id IS NOT NULL THEN
+            INSERT INTO notifications (user_id, notification_type, title, message, is_read)
+            VALUES (patient_user_id, 'appointment',
+              'Appointment Confirmed',
+              'Your appointment with Dr. ' || COALESCE(provider_name, 'Unknown') || ' on ' ||
+              TO_CHAR(NEW.appointment_date, 'Month DD, YYYY') || ' at ' ||
+              TO_CHAR(NEW.start_time, 'HH12:MI AM') || ' has been scheduled.',
+              false);
+          END IF;
+
+          IF provider_user_id IS NOT NULL THEN
+            INSERT INTO notifications (user_id, notification_type, title, message, is_read)
+            VALUES (provider_user_id, 'appointment',
+              'New Appointment Booked',
+              'New appointment with ' || COALESCE(patient_name, 'Patient') || ' on ' ||
+              TO_CHAR(NEW.appointment_date, 'Month DD, YYYY') || ' at ' ||
+              TO_CHAR(NEW.start_time, 'HH12:MI AM') || '.',
+              false);
+          END IF;
+
+          RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql SECURITY DEFINER;
+      `);
+
+      await svc.query(`
+        CREATE OR REPLACE FUNCTION set_prescription_defaults()
+        RETURNS TRIGGER AS $$
+        BEGIN
+          IF NEW.prescription_number IS NULL OR NEW.prescription_number = 'RX-PENDING' THEN
+            NEW.prescription_number := 'RX-' || to_char(now(), 'YYYYMMDD') || '-' || substr(gen_random_uuid()::text, 1, 8);
+          END IF;
+          RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+      `);
+
+      await svc.query(`
+        CREATE OR REPLACE FUNCTION notify_appointment_updated()
+        RETURNS TRIGGER AS $$
+        DECLARE
+          patient_user_id uuid;
+          provider_user_id uuid;
+          provider_name text;
+          notification_title text;
+          notification_message text;
+        BEGIN
+          IF OLD.status = NEW.status AND OLD.appointment_date = NEW.appointment_date AND OLD.start_time = NEW.start_time THEN
+            RETURN NEW;
+          END IF;
+
+          SELECT user_id INTO patient_user_id FROM patients WHERE id = NEW.patient_id;
+          SELECT p.user_id, up.first_name || ' ' || up.last_name
+          INTO provider_user_id, provider_name
+          FROM providers p LEFT JOIN user_profiles up ON p.user_id = up.id
+          WHERE p.id = NEW.provider_id;
+
+          CASE NEW.status
+            WHEN 'confirmed' THEN
+              notification_title := 'Appointment Confirmed';
+              notification_message := 'Your appointment on ' || TO_CHAR(NEW.appointment_date, 'Month DD, YYYY') || ' has been confirmed.';
+            WHEN 'cancelled' THEN
+              notification_title := 'Appointment Cancelled';
+              notification_message := 'Your appointment on ' || TO_CHAR(NEW.appointment_date, 'Month DD, YYYY') || ' has been cancelled.';
+            WHEN 'completed' THEN
+              notification_title := 'Appointment Completed';
+              notification_message := 'Your appointment with Dr. ' || COALESCE(provider_name, 'Unknown') || ' is complete.';
+            ELSE
+              notification_title := 'Appointment Updated';
+              notification_message := 'Your appointment has been updated.';
+          END CASE;
+
+          IF patient_user_id IS NOT NULL AND OLD.status != NEW.status THEN
+            INSERT INTO notifications (user_id, notification_type, title, message, is_read)
+            VALUES (patient_user_id, 'appointment', notification_title, notification_message, false);
+          END IF;
+
+          IF provider_user_id IS NOT NULL AND OLD.status != NEW.status THEN
+            INSERT INTO notifications (user_id, notification_type, title, message, is_read)
+            VALUES (provider_user_id, 'appointment', notification_title, notification_message, false);
+          END IF;
+
+          RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql SECURITY DEFINER;
+      `);
+
+      return { fixed: ['notify_appointment_created', 'notify_appointment_updated', 'set_prescription_defaults'] };
+    });
   },
 
   get_user_accessible_paths: async (client, params) => {
