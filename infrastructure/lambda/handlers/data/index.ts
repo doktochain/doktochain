@@ -181,7 +181,13 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             const dir = parts[1] === 'asc' ? 'ASC' : 'DESC';
             query += ` ORDER BY ${col} ${dir}`;
           } else {
-            query += ` ORDER BY created_at DESC`;
+            const hasCreatedAt = await client.query(
+              `SELECT 1 FROM information_schema.columns WHERE table_name = $1 AND column_name = 'created_at' LIMIT 1`,
+              [table]
+            );
+            if (hasCreatedAt.rows.length > 0) {
+              query += ` ORDER BY created_at DESC`;
+            }
           }
 
           if (limitVal) {
@@ -256,7 +262,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
               return result.rows;
             }
 
-            return badRequest('PUT requires an ID or query parameters', origin);
+            throw new Error('PUT requires an ID or query parameters');
           }
 
           const body = parseBody<Record<string, unknown>>(event.body);
@@ -296,11 +302,11 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             return { deleted: true };
           }
 
-          return badRequest('DELETE requires an ID or query parameters', origin);
+          throw new Error('DELETE requires an ID or query parameters');
         }
 
         default:
-          return badRequest(`Method ${method} not supported`, origin);
+          throw new Error(`Method ${method} not supported`);
       }
     });
 
