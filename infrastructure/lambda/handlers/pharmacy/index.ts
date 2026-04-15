@@ -21,7 +21,7 @@ router.get('/', async (event) => {
     let paramIndex = 1;
 
     if (search) {
-      query += ` AND name ILIKE $${paramIndex}`;
+      query += ` AND pharmacy_name ILIKE $${paramIndex}`;
       params.push(`%${search}%`);
       paramIndex++;
     }
@@ -32,7 +32,7 @@ router.get('/', async (event) => {
       paramIndex++;
     }
 
-    query += ` ORDER BY name LIMIT 50`;
+    query += ` ORDER BY pharmacy_name LIMIT 50`;
     const result = await client.query(query, params);
     return result.rows;
   });
@@ -46,7 +46,7 @@ router.get('/me', async (event) => {
 
   const data = await withRLS(user.userId, user.role, user.claims, async (client) => {
     const result = await client.query(
-      `SELECT * FROM pharmacies WHERE owner_user_id = $1`, [user.userId]
+      `SELECT * FROM pharmacies WHERE user_id = $1`, [user.userId]
     );
     return result.rows[0] || null;
   });
@@ -88,7 +88,7 @@ router.get('/:id/inventory', async (event, params) => {
     }
 
     if (lowStock === 'true') {
-      query += ` AND quantity_in_stock <= reorder_level`;
+      query += ` AND stock_quantity <= reorder_level`;
     }
 
     query += ` ORDER BY medication_name LIMIT 100`;
@@ -106,25 +106,25 @@ router.post('/:id/inventory', async (event, params) => {
     medication_name: string;
     generic_name?: string;
     brand_name?: string;
-    din?: string;
-    quantity_in_stock: number;
-    unit_price: number;
+    din_number?: string;
+    stock_quantity: number;
+    unit_price_cents: number;
     reorder_level?: number;
   }>(event.body);
 
-  if (!body.medication_name || body.quantity_in_stock === undefined || body.unit_price === undefined) {
-    return badRequest('Medication name, quantity, and unit price are required', origin);
+  if (!body.medication_name || body.stock_quantity === undefined || body.unit_price_cents === undefined) {
+    return badRequest('Medication name, stock quantity, and unit price (cents) are required', origin);
   }
 
   const data = await withRLS(user.userId, user.role, user.claims, async (client) => {
     const result = await client.query(
       `INSERT INTO pharmacy_inventory
-       (pharmacy_id, medication_name, generic_name, brand_name, din,
-        quantity_in_stock, unit_price, reorder_level, is_available)
+       (pharmacy_id, medication_name, generic_name, brand_name, din_number,
+        stock_quantity, unit_price_cents, reorder_level, is_available)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
        RETURNING *`,
       [params.id, body.medication_name, body.generic_name, body.brand_name,
-       body.din, body.quantity_in_stock, body.unit_price, body.reorder_level || 10]
+       body.din_number, body.stock_quantity, body.unit_price_cents, body.reorder_level || 10]
     );
     return result.rows[0];
   });
