@@ -20,7 +20,7 @@ router.get('/', async (event) => {
       SELECT rx.*,
         json_build_object('id', prov.id, 'first_name', pup.first_name, 'last_name', pup.last_name) as provider,
         json_build_object('id', pat.id, 'first_name', patup.first_name, 'last_name', patup.last_name) as patient,
-        json_build_object('id', ph.id, 'name', ph.name) as pharmacy,
+        json_build_object('id', ph.id, 'name', ph.pharmacy_name) as pharmacy,
         COALESCE(json_agg(ri.*) FILTER (WHERE ri.id IS NOT NULL), '[]') as items
       FROM prescriptions rx
       LEFT JOIN providers prov ON rx.provider_id = prov.id
@@ -43,7 +43,7 @@ router.get('/', async (event) => {
       params.push(user.userId);
       paramIndex++;
     } else if (role === 'pharmacy') {
-      query += ` AND rx.pharmacy_id = (SELECT id FROM pharmacies WHERE owner_user_id = $${paramIndex})`;
+      query += ` AND rx.pharmacy_id = (SELECT id FROM pharmacies WHERE user_id = $${paramIndex})`;
       params.push(user.userId);
       paramIndex++;
     }
@@ -73,7 +73,7 @@ router.get('/:id', async (event, params) => {
       `SELECT rx.*,
         json_build_object('id', prov.id, 'first_name', pup.first_name, 'last_name', pup.last_name) as provider,
         json_build_object('id', pat.id, 'first_name', patup.first_name, 'last_name', patup.last_name) as patient,
-        json_build_object('id', ph.id, 'name', ph.name, 'phone', ph.phone) as pharmacy,
+        json_build_object('id', ph.id, 'name', ph.pharmacy_name, 'phone', ph.phone) as pharmacy,
         COALESCE(json_agg(ri.*) FILTER (WHERE ri.id IS NOT NULL), '[]') as items
        FROM prescriptions rx
        LEFT JOIN providers prov ON rx.provider_id = prov.id
@@ -104,12 +104,13 @@ router.post('/', async (event) => {
     notes?: string;
     items: Array<{
       medication_name: string;
-      dosage: string;
+      strength: string;
+      dosage_form?: string;
       frequency: string;
-      duration?: string;
+      duration_days?: number;
       quantity?: number;
       refills_allowed?: number;
-      instructions?: string;
+      dosage_instructions?: string;
     }>;
   }>(event.body);
 
@@ -124,22 +125,25 @@ router.post('/', async (event) => {
     const providerId = providerResult.rows[0]?.id;
     if (!providerId) throw new ClientError('Provider profile not found');
 
+    const rxNumber = `RX-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
     const rxResult = await client.query(
       `INSERT INTO prescriptions
-       (provider_id, patient_id, pharmacy_id, appointment_id, diagnosis, notes, status, prescription_date)
-       VALUES ($1, $2, $3, $4, $5, $6, 'pending', now())
+       (prescription_number, provider_id, patient_id, pharmacy_id, appointment_id, diagnosis, notes, status, prescription_date)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'pending', CURRENT_DATE)
        RETURNING *`,
-      [providerId, body.patient_id, body.pharmacy_id, body.appointment_id, body.diagnosis, body.notes]
+      [rxNumber, providerId, body.patient_id, body.pharmacy_id, body.appointment_id, body.diagnosis, body.notes]
     );
     const prescription = rxResult.rows[0];
 
     for (const item of body.items) {
       await client.query(
         `INSERT INTO prescription_items
-         (prescription_id, medication_name, dosage, frequency, duration, quantity, refills_allowed, instructions)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [prescription.id, item.medication_name, item.dosage, item.frequency,
-         item.duration, item.quantity || 1, item.refills_allowed || 0, item.instructions]
+         (prescription_id, medication_name, strength, dosage_form, frequency, duration_days, quantity, refills_allowed, dosage_instructions)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [prescription.id, item.medication_name, item.strength || 'as prescribed',
+         item.dosage_form || 'tablet', item.frequency,
+         item.duration_days, item.quantity || 1, item.refills_allowed || 0,
+         item.dosage_instructions || `Take ${item.strength || ''} ${item.frequency}`]
       );
     }
 
@@ -154,7 +158,7 @@ router.put('/:id/status', async (event, params) => {
   const user = requireAuth(event);
   const body = parseBody<{ status: string; notes?: string }>(event.body);
 
-  const validStatuses = ['pending', 'sent', 'received', 'processing', 'filled', 'ready', 'picked_up', 'delivered', 'cancelled'];
+  const validStatuses = ['pending', 'sent', 'filled', 'cancelled'];
   if (!validStatuses.includes(body.status)) {
     return badRequest('Invalid status', origin);
   }
