@@ -69,8 +69,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
               );
 
               await client.query(
-                `INSERT INTO notifications (user_id, title, message, type, is_read)
-                 VALUES ($1, 'Subscription Activated', 'Your subscription has been set up successfully.', 'billing', false)`,
+                `INSERT INTO notifications (user_id, title, message, notification_type, is_read)
+                 VALUES ($1, 'Subscription Activated', 'Your subscription has been set up successfully.', 'payment', false)`,
                 [userId]
               );
             });
@@ -104,8 +104,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
               if (notifyUserId) {
                 const amount = ((session.amount_total || 0) / 100).toFixed(2);
                 await client.query(
-                  `INSERT INTO notifications (user_id, title, message, type, is_read)
-                   VALUES ($1, 'Payment Successful', $2, 'billing', false)`,
+                  `INSERT INTO notifications (user_id, title, message, notification_type, is_read)
+                   VALUES ($1, 'Payment Successful', $2, 'payment', false)`,
                   [notifyUserId, `Your payment of $${amount} CAD has been processed.`]
                 );
               }
