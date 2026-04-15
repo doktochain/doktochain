@@ -358,24 +358,42 @@ router.delete('/users/:id', async (event, params) => {
   return success({ message: 'User deleted' }, origin);
 });
 
+const ADMIN_USER_FIELDS = [
+  'first_name', 'last_name', 'phone', 'email', 'role',
+  'date_of_birth', 'gender', 'address_line1', 'address_line2',
+  'city', 'province', 'postal_code', 'country',
+  'language_preference', 'profile_completed', 'is_active',
+];
+
 router.put('/users/:id', async (event, params) => {
   const origin = getOrigin(event.headers);
   const user = requireRole(event, 'admin');
   const body = parseBody<Record<string, unknown>>(event.body);
 
-  const keys = Object.keys(body);
-  const values = Object.values(body);
-  const updates = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
+  const updates: string[] = [];
+  const values: unknown[] = [];
+  let paramIndex = 1;
+
+  for (const field of ADMIN_USER_FIELDS) {
+    if (body[field] !== undefined) {
+      updates.push(`${field} = $${paramIndex}`);
+      values.push(body[field]);
+      paramIndex++;
+    }
+  }
+
+  if (updates.length === 0) return badRequest('No valid fields to update', origin);
   values.push(params.id);
 
   const data = await withRLS(user.userId, user.role, user.claims, async (client) => {
     const result = await client.query(
-      `UPDATE user_profiles SET ${updates}, updated_at = now() WHERE id = $${values.length} RETURNING *`,
+      `UPDATE user_profiles SET ${updates.join(', ')}, updated_at = now() WHERE id = $${paramIndex} RETURNING *`,
       values
     );
     return result.rows[0];
   });
 
+  if (!data) return notFound('User not found', origin);
   return success(data, origin);
 });
 
