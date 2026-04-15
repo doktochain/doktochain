@@ -63,7 +63,23 @@ router.post('/register', async (event) => {
     ],
   });
 
-  const signUpResult = await cognitoClient.send(signUpCommand);
+  let signUpResult;
+  try {
+    signUpResult = await cognitoClient.send(signUpCommand);
+  } catch (err: any) {
+    const name = err?.name || err?.__type || '';
+    if (name === 'UsernameExistsException') {
+      return badRequest('An account with this email already exists', origin);
+    }
+    if (name === 'InvalidPasswordException') {
+      return badRequest('Password does not meet requirements: minimum 8 characters with uppercase, lowercase, number, and special character', origin);
+    }
+    if (name === 'InvalidParameterException') {
+      return badRequest(err.message || 'Invalid registration parameters', origin);
+    }
+    throw err;
+  }
+
   const userId = signUpResult.UserSub!;
 
   const addToGroupCommand = new AdminAddUserToGroupCommand({
@@ -74,6 +90,11 @@ router.post('/register', async (event) => {
   await cognitoClient.send(addToGroupCommand);
 
   await withServiceRole(async (client) => {
+    await client.query(
+      `INSERT INTO auth.users (id, email) VALUES ($1, $2) ON CONFLICT (id) DO NOTHING`,
+      [userId, body.email]
+    );
+
     await client.query(
       `INSERT INTO user_profiles (id, email, first_name, last_name, phone, role)
        VALUES ($1, $2, $3, $4, $5, $6)
