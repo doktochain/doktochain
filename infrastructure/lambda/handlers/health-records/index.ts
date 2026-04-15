@@ -96,30 +96,24 @@ router.get('/patient/:patientId/lab-results', async (event, params) => {
 router.post('/', async (event) => {
   const origin = getOrigin(event.headers);
   const user = requireAuth(event);
-  const body = parseBody<{
-    patient_id: string;
-    record_type: string;
-    title: string;
-    description?: string;
-    record_date: string;
-    data?: Record<string, unknown>;
-  }>(event.body);
+  const body = parseBody<any>(event.body);
 
   const data = await withRLS(user.userId, user.role, user.claims, async (client) => {
     const result = await client.query(
       `INSERT INTO medical_records
-       (patient_id, record_type, title, description, record_date, data, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+       (patient_id, record_type, title, description, record_date, data, file_url, file_type, file_size_bytes, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
       [body.patient_id, body.record_type, body.title, body.description,
-       body.record_date, JSON.stringify(body.data || {}), user.userId]
+       body.record_date, JSON.stringify(body.data || {}), 
+       body.file_url || null, body.file_type || null, body.file_size_bytes || null,
+       user.userId]
     );
     return result.rows[0];
   });
 
   return created(data, origin);
 });
-
 router.get('/fhir/:patientId', async (event, params) => {
   const origin = getOrigin(event.headers);
   const user = requireAuth(event);
@@ -140,6 +134,85 @@ router.get('/fhir/:patientId', async (event, params) => {
   });
 
   return success(data, origin);
+});
+
+router.get('/:id', async (event, params) => {
+  const origin = getOrigin(event.headers);
+  const user = requireAuth(event);
+
+  const data = await withRLS(user.userId, user.role, user.claims, async (client) => {
+    const result = await client.query(
+      `SELECT * FROM medical_records WHERE id = $1`,
+      [params.id]
+    );
+    return result.rows[0] || null;
+  });
+
+  if (!data) return notFound('Record not found', origin);
+  return success(data, origin);
+});
+
+router.put('/:id', async (event, params) => {
+  const origin = getOrigin(event.headers);
+  const user = requireAuth(event);
+  const body = parseBody<Record<string, unknown>>(event.body);
+
+  const allowedFields = ['title', 'description', 'record_date', 'record_type', 'status', 'data', 'file_url', 'file_type', 'file_size_bytes'];
+  const updates: string[] = [];
+  const values: unknown[] = [];
+  let paramIndex = 1;
+
+  for (const field of allowedFields) {
+    if (body[field] !== undefined) {
+      updates.push(`${field} = $${paramIndex}`);
+      values.push(body[field]);
+      paramIndex++;
+    }
+  }
+
+  if (updates.length === 0) return success({}, origin);
+
+  values.push(params.id);
+
+  const data = await withRLS(user.userId, user.role, user.claims, async (client) => {
+    const result = await client.query(
+      `UPDATE medical_records SET ${updates.join(', ')}, updated_at = now()
+       WHERE id = $${paramIndex} RETURNING *`,
+      values
+    );
+    return result.rows[0];
+  });
+
+  return success(data, origin);
+});
+
+router.delete('/:id', async (event, params) => {
+  const origin = getOrigin(event.headers);
+  const user = requireAuth(event);
+
+  await withRLS(user.userId, user.role, user.claims, async (client) => {
+    await client.query(`DELETE FROM medical_records WHERE id = $1`, [params.id]);
+  });
+
+  return success({ deleted: true }, origin);
+});
+
+router.post('/:id/share', async (event, params) => {
+  const origin = getOrigin(event.headers);
+  const user = requireAuth(event);
+  const body = parseBody<{ provider_id: string; expires_at?: string }>(event.body);
+
+  const data = await withRLS(user.userId, user.role, user.claims, async (client) => {
+    const result = await client.query(
+      `INSERT INTO medical_record_shares (record_id, shared_with, shared_by, expires_at)
+       VALUES ($1, $2, $3, $4) ON CONFLICT (record_id, shared_with) 
+       DO UPDATE SET expires_at = $4 RETURNING *`,
+      [params.id, body.provider_id, user.userId, body.expires_at || null]
+    );
+    return result.rows[0];
+  });
+
+  return created(data, origin);
 });
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
