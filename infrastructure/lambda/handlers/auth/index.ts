@@ -19,6 +19,16 @@ const clientId = process.env.COGNITO_CLIENT_ID!;
 
 const router = new Router('/auth');
 
+router.get('/health', async (event) => {
+  const origin = getOrigin(event.headers);
+  return success({
+    status: 'healthy',
+    service: 'auth',
+    timestamp: new Date().toISOString(),
+    region: process.env.AWS_REGION || 'ca-central-1',
+  }, origin);
+});
+
 router.post('/register', async (event) => {
   const origin = getOrigin(event.headers);
   const body = parseBody<{
@@ -105,7 +115,26 @@ router.post('/login', async (event) => {
     },
   });
 
-  const result = await cognitoClient.send(command);
+  let result;
+  try {
+    result = await cognitoClient.send(command);
+  } catch (err: any) {
+    const name = err?.name || err?.__type || '';
+    if (name === 'NotAuthorizedException') {
+      return badRequest('Incorrect email or password', origin);
+    }
+    if (name === 'UserNotFoundException') {
+      return badRequest('Incorrect email or password', origin);
+    }
+    if (name === 'UserNotConfirmedException') {
+      return badRequest('Account not confirmed. Please check your email for a verification link', origin);
+    }
+    if (name === 'PasswordResetRequiredException') {
+      return badRequest('Password reset required. Please reset your password', origin);
+    }
+    throw err;
+  }
+
   const authResult = result.AuthenticationResult;
 
   if (!authResult) {
