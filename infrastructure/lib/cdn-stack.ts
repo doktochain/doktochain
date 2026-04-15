@@ -10,7 +10,6 @@ import { EnvironmentConfig } from './config';
 interface CdnStackProps extends cdk.StackProps {
   config: EnvironmentConfig;
   apiGateway: apigateway.RestApi;
-  storageBucket: s3.IBucket;  // ADD THIS
 }
 
 export class CdnStack extends cdk.Stack {
@@ -20,8 +19,11 @@ export class CdnStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: CdnStackProps) {
     super(scope, id, props);
 
-    const { config, apiGateway, storageBucket } = props;
+    const { config, apiGateway } = props;
     const prefix = `${config.projectName}-${config.environment}`;
+    const storageBucket = s3.Bucket.fromBucketName(
+      this, 'StorageBucket', `${prefix}-storage`
+    );
 
     this.frontendBucket = new s3.Bucket(this, 'FrontendBucket', {
       bucketName: `${prefix}-frontend`,
