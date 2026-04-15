@@ -48,17 +48,20 @@ router.post('/checkout', async (event) => {
   const stripe = new Stripe(stripeKey, { apiVersion: '2024-12-18.acacia' });
 
   const transactionData = await withRLS(user.userId, user.role, user.claims, async (client) => {
-    const patientResult = await client.query(
-      `SELECT id FROM patients WHERE user_id = $1`, [user.userId]
-    );
-    const patientId = patientResult.rows[0]?.id;
+    const txNumber = `TXN-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
+    const relatedType = body.payment_type === 'pharmacy_order' ? 'pharmacy-order' : 'appointment';
+    const relatedId = body.appointment_id || body.order_id;
+
+    if (!relatedId) {
+      throw new (await import('../../shared/response')).ClientError('appointment_id or order_id is required', 400);
+    }
 
     const txResult = await client.query(
       `INSERT INTO billing_transactions
-       (patient_id, amount, currency, status, payment_type, description)
-       VALUES ($1, $2, 'CAD', 'pending', $3, $4)
+       (transaction_number, user_id, related_type, related_id, transaction_type, amount_cents, currency, status)
+       VALUES ($1, $2, $3, $4, 'charge', $5, 'CAD', 'pending')
        RETURNING *`,
-      [patientId, body.amount_cents / 100, body.payment_type, body.description]
+      [txNumber, user.userId, relatedType, relatedId, body.amount_cents]
     );
 
     return txResult.rows[0];
@@ -98,7 +101,7 @@ router.post('/subscription-checkout', async (event) => {
   const user = requireAuth(event);
   const body = parseBody<{
     plan_id: string;
-    billing_interval: 'monthly' | 'yearly';
+    billing_interval: 'monthly' | 'yearly' | 'annual';
   }>(event.body);
 
   const stripeKey = await getStripeKey();
@@ -115,9 +118,8 @@ router.post('/subscription-checkout', async (event) => {
 
   if (!planData) return badRequest('Plan not found', origin);
 
-  const priceId = body.billing_interval === 'yearly'
-    ? planData.stripe_yearly_price_id
-    : planData.stripe_monthly_price_id;
+  const isAnnual = body.billing_interval === 'yearly' || body.billing_interval === 'annual';
+  const priceId = isAnnual ? planData.stripe_yearly_price_id : planData.stripe_monthly_price_id;
 
   if (!priceId) return badRequest('Stripe price not configured for this plan', origin);
 
@@ -139,16 +141,19 @@ router.post('/subscription-checkout', async (event) => {
     },
   });
 
+  const billingInterval = isAnnual ? 'annual' : 'monthly';
+  const subscriberType = user.role === 'pharmacy' ? 'pharmacy' : user.role === 'clinic' ? 'clinic' : 'provider';
+
   await withServiceRole(async (client) => {
     await client.query(
-      `INSERT INTO subscriptions (subscriber_id, plan_id, status, billing_interval)
-       VALUES ($1, $2, 'trialing', $3)
+      `INSERT INTO subscriptions (subscriber_id, subscriber_type, plan_id, status, billing_interval)
+       VALUES ($1, $2, $3, 'trialing', $4)
        ON CONFLICT (subscriber_id) DO UPDATE SET
          plan_id = EXCLUDED.plan_id,
          status = 'trialing',
          billing_interval = EXCLUDED.billing_interval,
          updated_at = now()`,
-      [user.userId, body.plan_id, body.billing_interval]
+      [user.userId, subscriberType, body.plan_id, billingInterval]
     );
   });
 
