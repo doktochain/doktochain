@@ -194,7 +194,7 @@ router.put('/me', async (event) => {
 
   const allowedFields = [
     'license_number', 'license_province', 'license_expiry', 'npi_number',
-    'bio', 'years_of_experience', 'education', 'consultation_fee',
+    'bio', 'years_of_experience', 'education',
     'accepts_new_patients', 'telemedicine_enabled', 'languages_spoken',
   ];
 
@@ -281,6 +281,54 @@ publicRouter.get('/procedures', async (event) => {
     if (!includeAll) query += ` AND is_common = true`;
     query += ` ORDER BY display_order ASC`;
     const r = await client.query(query);
+    return r.rows;
+  });
+  return success(result, origin);
+});
+
+publicRouter.get('/providers', async (event) => {
+  const origin = getOrigin(event.headers);
+  const specialty = getQueryParam(event.queryStringParameters, 'specialty');
+  const city = getQueryParam(event.queryStringParameters, 'city');
+  const search = getQueryParam(event.queryStringParameters, 'search');
+  const limit = parseInt(getQueryParam(event.queryStringParameters, 'limit') || '20', 10);
+  const offset = parseInt(getQueryParam(event.queryStringParameters, 'offset') || '0', 10);
+
+  const result = await withRLS('anonymous', 'anon', {}, async (client) => {
+    let query = `
+      SELECT p.*, up.first_name, up.last_name, up.profile_photo_url, up.city, up.province,
+             COALESCE(
+               json_agg(DISTINCT ps.specialty) FILTER (WHERE ps.id IS NOT NULL), '[]'
+             ) as specialties
+      FROM providers p
+      JOIN user_profiles up ON p.user_id = up.id
+      LEFT JOIN provider_specialties ps ON p.id = ps.provider_id
+      WHERE p.is_active = true AND p.is_verified = true
+    `;
+    const params: unknown[] = [];
+    let paramIndex = 1;
+
+    if (specialty) {
+      query += ` AND ps.specialty ILIKE $${paramIndex}`;
+      params.push(`%${specialty}%`);
+      paramIndex++;
+    }
+    if (city) {
+      query += ` AND up.city ILIKE $${paramIndex}`;
+      params.push(`%${city}%`);
+      paramIndex++;
+    }
+    if (search) {
+      query += ` AND (up.first_name ILIKE $${paramIndex} OR up.last_name ILIKE $${paramIndex} OR ps.specialty ILIKE $${paramIndex})`;
+      params.push(`%${search}%`);
+      paramIndex++;
+    }
+
+    query += ` GROUP BY p.id, up.id ORDER BY p.created_at DESC`;
+    query += ` LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    params.push(limit, offset);
+
+    const r = await client.query(query, params);
     return r.rows;
   });
   return success(result, origin);
