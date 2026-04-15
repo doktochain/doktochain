@@ -168,7 +168,7 @@ router.get('/:id', async (event, params) => {
               ) as specialties,
               COALESCE(
                 json_agg(DISTINCT jsonb_build_object(
-                  'id', pl.id, 'name', pl.name, 'address', pl.address_line1,
+                  'id', pl.id, 'name', pl.location_name, 'address', pl.address_line1,
                   'city', pl.city, 'province', pl.province, 'is_primary', pl.is_primary
                 )) FILTER (WHERE pl.id IS NOT NULL), '[]'
               ) as locations
