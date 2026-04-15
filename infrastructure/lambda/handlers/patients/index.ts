@@ -9,7 +9,7 @@ import {
 
 const router = new Router('/patients');
 
-router.get('/profile/:id', async (event) => {
+router.get('/me', async (event) => {
   const origin = getOrigin(event.headers);
   const user = requireAuth(event);
 
@@ -111,22 +111,53 @@ router.get('/', async (event) => {
   return success(result, origin);
 });
 
+const PATIENT_ALLOWED_FIELDS = [
+  'health_card_number', 'health_card_province', 'health_card_expiry',
+  'blood_type', 'height_cm', 'weight_kg', 'medical_history',
+  'chronic_conditions', 'preferred_pharmacy_id',
+];
+
 router.post('/', async (event) => {
   const origin = getOrigin(event.headers);
   const user = requireAuth(event);
-  const body = parseBody<any>(event.body);
-  
+  const body = parseBody<Record<string, unknown>>(event.body);
+
+  const safeKeys: string[] = [];
+  const safeValues: unknown[] = [];
+  for (const field of PATIENT_ALLOWED_FIELDS) {
+    if (body[field] !== undefined) {
+      safeKeys.push(field);
+      safeValues.push(body[field]);
+    }
+  }
+
   const result = await withRLS(user.userId, user.role, user.claims, async (client) => {
+    if (safeKeys.length === 0) {
+      const r = await client.query(
+        `INSERT INTO patients (user_id) VALUES ($1)
+         ON CONFLICT (user_id) DO NOTHING
+         RETURNING *`,
+        [user.userId]
+      );
+      if (r.rows[0]) return r.rows[0];
+      const existing = await client.query(`SELECT * FROM patients WHERE user_id = $1`, [user.userId]);
+      return existing.rows[0];
+    }
+
+    const columns = safeKeys.join(', ');
+    const placeholders = safeKeys.map((_, i) => `$${i + 2}`).join(', ');
+    const updateClauses = safeKeys.map((k, i) => `${k} = $${i + 2}`).join(', ');
+
     const r = await client.query(
-      `INSERT INTO patients (user_id, ${Object.keys(body).join(', ')})
-       VALUES ($1, ${Object.keys(body).map((_, i) => `$${i + 2}`).join(', ')})
-       ON CONFLICT (user_id) DO UPDATE SET ${Object.keys(body).map((k, i) => `${k} = $${i + 2}`).join(', ')}
+      `INSERT INTO patients (user_id, ${columns})
+       VALUES ($1, ${placeholders})
+       ON CONFLICT (user_id) DO UPDATE SET ${updateClauses}
        RETURNING *`,
-      [user.userId, ...Object.values(body)]
+      [user.userId, ...safeValues]
     );
     return r.rows[0];
   });
-  
+
   return success(result, origin);
 });
 
@@ -278,7 +309,7 @@ router.put('/:id', async (event, params) => {
     'blood_type', 'height_cm', 'weight_kg', 'medical_history',
     'chronic_conditions', 'first_name', 'last_name', 'phone',
     'date_of_birth', 'gender', 'address_line1', 'address_line2',
-    'city', 'province', 'postal_code', 'country',
+    'city', 'province', 'postal_code', 'country', 'profile_completed',
   ];
 
   const updates: string[] = [];
