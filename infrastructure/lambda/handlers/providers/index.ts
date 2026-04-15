@@ -232,7 +232,7 @@ router.get('/:id/schedule', async (event, params) => {
 
   const data = await withRLS(user.userId, user.role, user.claims, async (client) => {
     const result = await client.query(
-      `SELECT * FROM provider_schedules WHERE provider_id = $1 AND is_active = true
+      `SELECT * FROM provider_schedules WHERE provider_id = $1 AND is_available = true
        ORDER BY day_of_week, start_time`,
       [params.id]
     );
