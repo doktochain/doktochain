@@ -48,6 +48,18 @@ function handler(event) {
       `.trim()),
     });
 
+    const storageRewriteFunction = new cloudfront.Function(this, 'StorageRewriteFunction', {
+      functionName: `${prefix}-storage-rewrite`,
+      code: cloudfront.FunctionCode.fromInline(`
+    function handler(event) {
+      var request = event.request;
+      request.uri = request.uri.replace(/^\\/storage/, '');
+      if (request.uri === '') request.uri = '/';
+      return request;
+    }
+      `.trim()),
+    });
+
     const apiDomainName = `${apiGateway.restApiId}.execute-api.${this.region}.amazonaws.com`;
     const apiStageName = config.environment === 'production' ? 'v1' : 'staging';
 
@@ -108,6 +120,10 @@ function handler(event) {
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
           cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
           allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+          functionAssociations: [{
+            function: storageRewriteFunction,
+            eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
+          }],
         },
       },
       errorResponses: [
