@@ -14,6 +14,29 @@ interface Route {
   handler: RouteHandler;
 }
 
+const AWS_ERROR_MAP: Record<string, { status: number; message: string }> = {
+  NotAuthorizedException: { status: 401, message: 'Invalid credentials' },
+  UserNotFoundException: { status: 404, message: 'User not found' },
+  UsernameExistsException: { status: 409, message: 'An account with this email already exists' },
+  CodeMismatchException: { status: 400, message: 'Invalid verification code' },
+  ExpiredCodeException: { status: 400, message: 'Verification code has expired' },
+  InvalidPasswordException: { status: 400, message: 'Password does not meet requirements' },
+  InvalidParameterException: { status: 400, message: 'Invalid request parameters' },
+  LimitExceededException: { status: 429, message: 'Too many attempts, please try again later' },
+  TooManyRequestsException: { status: 429, message: 'Too many requests, please slow down' },
+  UserNotConfirmedException: { status: 403, message: 'Account not confirmed. Please check your email' },
+  PasswordResetRequiredException: { status: 403, message: 'Password reset required' },
+  ResourceNotFoundException: { status: 404, message: 'Resource not found' },
+  AliasExistsException: { status: 409, message: 'An account with this email already exists' },
+};
+
+function resolveAwsSdkError(err: unknown): { status: number; message: string } | null {
+  if (!err || typeof err !== 'object') return null;
+  const e = err as Record<string, unknown>;
+  const errorName = (e.name as string) || (e.__type as string) || '';
+  return AWS_ERROR_MAP[errorName] || null;
+}
+
 export class Router {
   private routes: Route[] = [];
   private basePath: string;
@@ -89,6 +112,11 @@ export class Router {
 
       if (err instanceof ClientError) {
         return error(err.message, err.statusCode, origin);
+      }
+
+      const awsErr = resolveAwsSdkError(err);
+      if (awsErr) {
+        return error(awsErr.message, awsErr.status, origin);
       }
 
       console.error('Unhandled error:', err);
