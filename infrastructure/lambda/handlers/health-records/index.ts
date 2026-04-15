@@ -47,8 +47,8 @@ router.get('/patient/:patientId/timeline', async (event, params) => {
               diagnosis as description, status
        FROM prescriptions WHERE patient_id = $1
        UNION ALL
-       SELECT 'lab_result' as event_type, id, record_date as event_date,
-              title as description, status
+       SELECT 'lab-result' as event_type, id, record_date as event_date,
+              title as description, 'complete' as status
        FROM medical_records WHERE patient_id = $1 AND record_type = 'lab-result'
        ORDER BY event_date DESC LIMIT 100`,
       [params.patientId]
