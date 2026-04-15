@@ -10,6 +10,7 @@ import { EnvironmentConfig } from './config';
 interface CdnStackProps extends cdk.StackProps {
   config: EnvironmentConfig;
   apiGateway: apigateway.RestApi;
+  storageBucket: s3.IBucket;  // ADD THIS
 }
 
 export class CdnStack extends cdk.Stack {
@@ -19,7 +20,7 @@ export class CdnStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: CdnStackProps) {
     super(scope, id, props);
 
-    const { config, apiGateway } = props;
+    const { config, apiGateway, storageBucket } = props;
     const prefix = `${config.projectName}-${config.environment}`;
 
     this.frontendBucket = new s3.Bucket(this, 'FrontendBucket', {
@@ -98,6 +99,13 @@ function handler(event) {
             function: apiRewriteFunction,
             eventType: cloudfront.FunctionEventType.VIEWER_REQUEST,
           }],
+        },
+        
+        '/storage/*': {
+          origin: origins.S3BucketOrigin.withOriginAccessControl(storageBucket),
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
+          cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
         },
       },
       errorResponses: [
