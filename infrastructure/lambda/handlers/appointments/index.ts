@@ -29,7 +29,7 @@ router.get('/', async (event) => {
           'id', pat.id, 'first_name', patup.first_name, 'last_name', patup.last_name
         ) as patient,
         json_build_object(
-          'id', pl.id, 'name', pl.name, 'city', pl.city
+          'id', pl.id, 'name', pl.location_name, 'city', pl.city
         ) as location
       FROM appointments a
       LEFT JOIN providers prov ON a.provider_id = prov.id
@@ -85,7 +85,7 @@ router.get('/:id', async (event, params) => {
           'phone', patup.phone, 'email', patup.email
         ) as patient,
         json_build_object(
-          'id', pl.id, 'name', pl.name, 'address_line1', pl.address_line1,
+          'id', pl.id, 'name', pl.location_name, 'address_line1', pl.address_line1,
           'city', pl.city, 'province', pl.province
         ) as location
        FROM appointments a
@@ -114,7 +114,9 @@ router.post('/', async (event) => {
     appointment_date: string;
     start_time: string;
     end_time: string;
-    consultation_type: string;
+    appointment_type?: string;
+    consultation_type?: string;
+    visit_type?: string;
     reason_for_visit?: string;
     notes?: string;
   }>(event.body);
@@ -147,14 +149,17 @@ router.post('/', async (event) => {
       throw new ClientError('Time slot is already booked', 409);
     }
 
+    const appointmentType = body.appointment_type || body.consultation_type || 'in-person';
+    const visitType = body.visit_type || 'initial';
+
     const result = await client.query(
       `INSERT INTO appointments
        (patient_id, provider_id, location_id, appointment_date, start_time, end_time,
-        consultation_type, reason_for_visit, notes, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'scheduled')
+        appointment_type, visit_type, reason_for_visit, notes, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'scheduled')
        RETURNING *`,
       [patientId, body.provider_id, body.location_id, body.appointment_date,
-       body.start_time, body.end_time, body.consultation_type,
+       body.start_time, body.end_time, appointmentType, visitType,
        body.reason_for_visit, body.notes]
     );
 
@@ -166,7 +171,7 @@ router.post('/', async (event) => {
 
     if (providerResult.rows[0]) {
       await client.query(
-        `INSERT INTO notifications (user_id, title, message, type, is_read)
+        `INSERT INTO notifications (user_id, title, message, notification_type, is_read)
          VALUES ($1, 'New Appointment', 'A new appointment has been booked.', 'appointment', false)`,
         [providerResult.rows[0].user_id]
       );
