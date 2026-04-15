@@ -61,7 +61,6 @@ const cdnStack = new CdnStack(app, `${prefix}-cdn`, {
   env,
   config,
   apiGateway: apiStack.restApi,
-  storageBucket: storageStack.storageBucket,
 });
 
 new MonitoringStack(app, `${prefix}-monitoring`, {
