@@ -87,7 +87,8 @@ export class Router {
   async handle(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
     const origin = getOrigin(event.headers);
     const method = event.httpMethod;
-    const path = event.path || event.resource;
+    const rawPath = event.path || event.resource;
+    const path = rawPath.length > 1 && rawPath.endsWith('/') ? rawPath.slice(0, -1) : rawPath;
 
     try {
       for (const route of this.routes) {
