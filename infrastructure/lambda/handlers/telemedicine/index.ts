@@ -41,7 +41,7 @@ router.post('/room', async (event) => {
 
   const appointment = await withRLS(user.userId, user.role, user.claims, async (client) => {
     const result = await client.query(
-      `SELECT * FROM appointments WHERE id = $1 AND consultation_type IN ('virtual', 'video')`,
+      `SELECT * FROM appointments WHERE id = $1 AND appointment_type = 'virtual'`,
       [body.appointmentId]
     );
     return result.rows[0];
@@ -82,7 +82,7 @@ router.post('/room', async (event) => {
 
   await withRLS(user.userId, user.role, user.claims, async (client) => {
     await client.query(
-      `UPDATE appointments SET video_room_url = $1, status = 'in-progress', updated_at = now()
+      `UPDATE appointments SET video_room_id = $1, status = 'in-progress', updated_at = now()
        WHERE id = $2`,
       [roomData.url, body.appointmentId]
     );
@@ -101,17 +101,17 @@ router.get('/room/:appointmentId', async (event, params) => {
 
   const data = await withRLS(user.userId, user.role, user.claims, async (client) => {
     const result = await client.query(
-      `SELECT id, video_room_url, status FROM appointments WHERE id = $1`,
+      `SELECT id, video_room_id, status FROM appointments WHERE id = $1`,
       [params.appointmentId]
     );
     return result.rows[0];
   });
 
-  if (!data?.video_room_url) {
+  if (!data?.video_room_id) {
     return notFound('Video room not found for this appointment', origin);
   }
 
-  return success({ roomUrl: data.video_room_url, status: data.status }, origin);
+  return success({ roomUrl: data.video_room_id, status: data.status }, origin);
 });
 
 router.post('/room/:appointmentId/end', async (event, params) => {
