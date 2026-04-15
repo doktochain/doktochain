@@ -35,6 +35,11 @@ router.get('/profile/:id', async (event, params) => {
   const origin = getOrigin(event.headers);
   const user = requireAuth(event);
 
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!UUID_RE.test(params.id)) {
+    return badRequest('Invalid patient ID format', origin);
+  }
+
   const data = await withRLS(user.userId, user.role, user.claims, async (client) => {
     const result = await client.query(
       `SELECT p.*, up.email, up.first_name, up.last_name, up.phone,
