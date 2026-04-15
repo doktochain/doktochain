@@ -147,14 +147,14 @@ router.put('/providers/:id/verify', async (event, params) => {
 
   const data = await withRLS(user.userId, user.role, user.claims, async (client) => {
     const result = await client.query(
-      `UPDATE providers SET is_verified = true, is_active = true, verified_at = now(), updated_at = now()
+      `UPDATE providers SET is_verified = true, is_active = true, verification_date = now(), updated_at = now()
        WHERE id = $1 RETURNING *`,
       [params.id]
     );
 
     if (result.rows[0]) {
       await client.query(
-        `INSERT INTO notifications (user_id, title, message, type, is_read)
+        `INSERT INTO notifications (user_id, title, message, notification_type, is_read)
          VALUES ($1, 'Account Verified', 'Your provider account has been verified.', 'system', false)`,
         [result.rows[0].user_id]
       );
@@ -175,7 +175,7 @@ router.get('/pharmacies', async (event) => {
     const result = await client.query(
       `SELECT ph.*, up.first_name as owner_first_name, up.last_name as owner_last_name, up.email as owner_email
        FROM pharmacies ph
-       LEFT JOIN user_profiles up ON ph.owner_user_id = up.id
+       LEFT JOIN user_profiles up ON ph.user_id = up.id
        ORDER BY ph.created_at DESC LIMIT 100`
     );
     return result.rows;
