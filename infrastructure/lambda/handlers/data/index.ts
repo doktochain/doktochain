@@ -50,7 +50,7 @@ const TABLE_ALLOWLIST = new Set([
   'clinics', 'clinic_services', 'clinic_specializations', 'clinic_staff',
   'referrals',
   'billing_transactions', 'provider_settlements', 'provider_payouts',
-  'insurance_claims', 'insurance_policies', 'payment_methods',
+  'insurance_claims', 'insurance_policies', 'payment_methods', 'invoices',
   'platform_expenses', 'platform_invoices', 'platform_invoice_items',
   'platform_income', 'subscription_plans', 'subscriptions',
   'departments', 'designations', 'staff_attendance', 'leave_types',
