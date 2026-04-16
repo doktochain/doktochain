@@ -29,7 +29,7 @@ function getStoredTokens(): { idToken: string | null; accessToken: string | null
 const DOMAIN_PREFIXES = new Set([
   'auth', 'admin', 'patients', 'providers', 'appointments', 'prescriptions',
   'pharmacy', 'health-records', 'messaging', 'clinic', 'audit', 'billing',
-  'telemedicine', 'storage', 'public', 'webhooks', 'data', 'rpc',
+  'telemedicine', 'storage', 'public', 'webhooks', 'data', 'public-data', 'rpc',
 ]);
 
 function resolvePath(path: string): string {
