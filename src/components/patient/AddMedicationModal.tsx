@@ -1,24 +1,28 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 
-interface AddMedicationModalProps {
-  onClose: () => void;
-  onSave: (medication: {
-    medication_name: string;
-    dosage: string;
-    frequency: string;
-    start_date: string;
-    prescribing_doctor?: string;
-  }) => Promise<void>;
+interface MedicationFormData {
+  medication_name: string;
+  dosage: string;
+  frequency: string;
+  start_date: string;
+  prescribing_doctor?: string;
 }
 
-export default function AddMedicationModal({ onClose, onSave }: AddMedicationModalProps) {
+interface AddMedicationModalProps {
+  onClose: () => void;
+  onSave: (medication: MedicationFormData) => Promise<void>;
+  initialData?: MedicationFormData;
+}
+
+export default function AddMedicationModal({ onClose, onSave, initialData }: AddMedicationModalProps) {
+  const isEditing = !!initialData;
   const [formData, setFormData] = useState({
-    medication_name: '',
-    dosage: '',
-    frequency: '',
-    start_date: new Date().toISOString().split('T')[0],
-    prescribing_doctor: '',
+    medication_name: initialData?.medication_name || '',
+    dosage: initialData?.dosage || '',
+    frequency: initialData?.frequency || '',
+    start_date: initialData?.start_date?.split('T')[0] || new Date().toISOString().split('T')[0],
+    prescribing_doctor: initialData?.prescribing_doctor || '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -42,7 +46,7 @@ export default function AddMedicationModal({ onClose, onSave }: AddMedicationMod
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
         <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-4 flex items-center justify-between rounded-t-xl">
-          <h2 className="text-xl font-bold text-white">Add Medication</h2>
+          <h2 className="text-xl font-bold text-white">{isEditing ? 'Edit Medication' : 'Add Medication'}</h2>
           <button onClick={onClose} className="text-white hover:text-gray-200">
             <X size={24} />
           </button>
@@ -143,7 +147,7 @@ export default function AddMedicationModal({ onClose, onSave }: AddMedicationMod
               disabled={loading}
               className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
             >
-              {loading ? 'Adding...' : 'Add Medication'}
+              {loading ? (isEditing ? 'Saving...' : 'Adding...') : (isEditing ? 'Save Changes' : 'Add Medication')}
             </button>
           </div>
         </form>
