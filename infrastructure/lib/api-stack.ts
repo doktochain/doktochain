@@ -215,6 +215,7 @@ export class ApiStack extends cdk.Stack {
     addResource('telemedicine', telemedicineFn, authOpts);
     addResource('storage', storageFn, authOpts);
     addResource('data', dataFn, authOpts);
+    addResource('public-data', dataFn, {});
     addResource('rpc', rpcFn, authOpts);
 
     const webhookResource = this.restApi.root.addResource('webhooks');
