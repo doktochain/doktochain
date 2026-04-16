@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { providerService, ProviderSchedule, ProviderLocation } from '../../../../services/providerService';
-import { supabase } from '../../../../lib/supabase';
-import { Clock, Plus, Pencil, Trash2, MapPin, X, CalendarOff, CalendarPlus } from 'lucide-react';
+import { api } from '../../../../lib/api-client';
+import { Clock, Plus, Trash2, MapPin, CalendarOff, CalendarPlus } from 'lucide-react';
 import { ConfirmDialog } from '../../../../components/ui/confirm-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { Badge } from '../../../../components/ui/badge';
@@ -69,43 +69,62 @@ export default function ProviderScheduleManagement() {
           setSelectedLocation(locationsData[0].id);
         }
 
-        const { data: overridesData } = await supabase
-          .from('provider_schedule_overrides')
-          .select('*')
-          .eq('provider_id', providerData.id)
-          .gte('override_date', new Date().toISOString().split('T')[0])
-          .order('override_date', { ascending: true });
+        const today = new Date().toISOString().split('T')[0];
+        const { data: overridesData } = await api.get<any[]>('/provider-unavailability', {
+          params: {
+            provider_id: providerData.id,
+            end_date_gte: today,
+            order: 'start_date:asc',
+          },
+        });
         setOverrides(overridesData || []);
       }
     } catch (error) {
       console.error('Error loading data:', error);
+      toast.error('Failed to load schedule');
     } finally {
       setLoading(false);
     }
   };
 
   const handleAddSchedule = async () => {
-    if (!provider || !selectedLocation) return;
+    if (!provider) {
+      toast.error('Provider profile not loaded');
+      return;
+    }
+    if (!selectedLocation) {
+      toast.error('Please select a location first');
+      return;
+    }
+    if (newSchedule.end_time <= newSchedule.start_time) {
+      toast.error('End time must be after start time');
+      return;
+    }
 
     try {
       await providerService.addSchedule({
         provider_id: provider.id,
         location_id: selectedLocation,
-        ...newSchedule,
+        day_of_week: newSchedule.day_of_week,
+        start_time: newSchedule.start_time,
+        end_time: newSchedule.end_time,
+        slot_duration_minutes: newSchedule.slot_duration_minutes,
+        is_available: true,
       });
 
+      toast.success('Time slot added');
       setShowAddModal(false);
       setNewSchedule({
-        day_of_week: 1,
+        day_of_week: newSchedule.day_of_week,
         start_time: '09:00',
         end_time: '17:00',
         slot_duration_minutes: 30,
       });
 
       loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding schedule:', error);
-      toast.error('Failed to add schedule');
+      toast.error(error?.message || 'Failed to add schedule');
     }
   };
 
@@ -115,23 +134,24 @@ export default function ProviderScheduleManagement() {
     try {
       const insertData: any = {
         provider_id: provider.id,
-        override_date: newOverride.override_date,
-        is_available: newOverride.is_available,
-        reason: newOverride.reason || null,
-        slot_duration_minutes: newOverride.slot_duration_minutes,
+        start_date: newOverride.override_date,
+        end_date: newOverride.override_date,
+        reason: newOverride.reason || (newOverride.is_available ? 'Custom hours' : 'Unavailable'),
+        is_recurring: false,
+        recurrence_pattern: newOverride.is_available
+          ? {
+              is_available: true,
+              start_time: newOverride.start_time,
+              end_time: newOverride.end_time,
+              slot_duration_minutes: newOverride.slot_duration_minutes,
+            }
+          : { is_available: false },
       };
 
-      if (newOverride.is_available) {
-        insertData.start_time = newOverride.start_time;
-        insertData.end_time = newOverride.end_time;
-      }
-
-      const { error } = await supabase
-        .from('provider_schedule_overrides')
-        .insert(insertData);
-
+      const { error } = await api.post('/provider-unavailability', insertData);
       if (error) throw error;
 
+      toast.success('Date override saved');
       setShowOverrideModal(false);
       setNewOverride({
         override_date: '',
@@ -144,7 +164,7 @@ export default function ProviderScheduleManagement() {
       loadData();
     } catch (error: any) {
       console.error('Error adding override:', error);
-      toast.error(`Failed to add override: ${error.message}`);
+      toast.error(`Failed to add override: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -160,18 +180,16 @@ export default function ProviderScheduleManagement() {
     if (!deleteTarget) return;
     try {
       if (deleteTarget.type === 'override') {
-        const { error } = await supabase
-          .from('provider_schedule_overrides')
-          .delete()
-          .eq('id', deleteTarget.id);
+        const { error } = await api.delete(`/provider-unavailability/${deleteTarget.id}`);
         if (error) throw error;
       } else {
         await providerService.deleteSchedule(deleteTarget.id);
       }
+      toast.success('Removed');
       loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting:', error);
-      toast.error('Failed to delete item');
+      toast.error(error?.message || 'Failed to delete item');
     }
   };
 
@@ -410,17 +428,21 @@ export default function ProviderScheduleManagement() {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {overrides.map((override) => (
+                      {overrides.map((override) => {
+                        const rp = override.recurrence_pattern || {};
+                        const isAvailable = rp.is_available !== false;
+                        const overrideDate = override.start_date || override.override_date;
+                        return (
                         <div
                           key={override.id}
                           className={`flex items-center gap-4 p-4 rounded-lg border ${
-                            override.is_available
+                            isAvailable
                               ? 'bg-sky-50/50 border-sky-100'
                               : 'bg-red-50/50 border-red-100'
                           }`}
                         >
-                          <div className={`p-2 rounded-lg ${override.is_available ? 'bg-sky-100' : 'bg-red-100'}`}>
-                            {override.is_available ? (
+                          <div className={`p-2 rounded-lg ${isAvailable ? 'bg-sky-100' : 'bg-red-100'}`}>
+                            {isAvailable ? (
                               <Clock className="w-5 h-5 text-sky-600" />
                             ) : (
                               <CalendarOff className="w-5 h-5 text-red-600" />
@@ -428,7 +450,7 @@ export default function ProviderScheduleManagement() {
                           </div>
                           <div className="flex-1">
                             <p className="font-medium text-foreground">
-                              {new Date(override.override_date + 'T00:00:00').toLocaleDateString('en-US', {
+                              {new Date(overrideDate + 'T00:00:00').toLocaleDateString('en-US', {
                                 weekday: 'long',
                                 month: 'long',
                                 day: 'numeric',
@@ -436,8 +458,8 @@ export default function ProviderScheduleManagement() {
                               })}
                             </p>
                             <p className="text-sm text-muted-foreground">
-                              {override.is_available
-                                ? `Custom hours: ${formatTime(override.start_time)} - ${formatTime(override.end_time)} (${override.slot_duration_minutes}m slots)`
+                              {isAvailable && rp.start_time && rp.end_time
+                                ? `Custom hours: ${formatTime(rp.start_time)} - ${formatTime(rp.end_time)}${rp.slot_duration_minutes ? ` (${rp.slot_duration_minutes}m slots)` : ''}`
                                 : 'Unavailable'}
                               {override.reason && ` -- ${override.reason}`}
                             </p>
@@ -451,7 +473,8 @@ export default function ProviderScheduleManagement() {
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -468,6 +491,10 @@ export default function ProviderScheduleManagement() {
           </DialogHeader>
 
           <div className="space-y-4">
+            <p className="text-xs text-muted-foreground bg-sky-50 border border-sky-100 rounded-md p-2">
+              Tip: add multiple slots per day to carve out breaks. For example, add "9:00 AM – 12:00 PM" and
+              "1:00 PM – 5:00 PM" to make 12:00 – 1:00 PM unavailable.
+            </p>
             <div>
               <Label className="mb-2 block">Day of Week</Label>
               <Select
