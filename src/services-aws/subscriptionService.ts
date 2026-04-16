@@ -49,7 +49,7 @@ export class SubscriptionService {
     const params: any = { is_active: true, order: 'display_order' };
     if (role) params.target_role = role;
 
-    const { data, error } = await api.get<SubscriptionPlan[]>('/subscription-plans', { params });
+    const { data, error } = await api.get<SubscriptionPlan[]>('/public-data/subscription-plans', { params });
     if (error) throw error;
     return data || [];
   }
@@ -220,13 +220,13 @@ export class SubscriptionService {
   }
 
   static async getFoundingSlotsRemaining(): Promise<number> {
-    const { data: slotConfig } = await api.get<any>('/founding-member-slots', {
+    const { data: slotConfig } = await api.get<any>('/public-data/founding-member-slots', {
       params: { plan_key: 'founding_pro', single: true },
     });
 
     const maxSlots = slotConfig?.max_slots || 30;
 
-    const { data: plan } = await api.get<any>('/subscription-plans', {
+    const { data: plan } = await api.get<any>('/public-data/subscription-plans', {
       params: { plan_key: 'founding_pro', single: true },
     });
 
