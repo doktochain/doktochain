@@ -4,7 +4,7 @@ import { useAuth } from '../../../../contexts/AuthContext';
 import { patientService } from '../../../../services/patientService';
 import { medicalRecordService, MedicalRecord } from '../../../../services/medicalRecordService';
 import { ConfirmDialog } from '../../../../components/ui/confirm-dialog';
-import { FileText, FileImage, Download, Upload, Eye, Trash2, Folder } from 'lucide-react';
+import { FileText, FileImage, Download, Upload, Eye, Trash2, Folder, Loader2 } from 'lucide-react';
 
 
 export default function MedicalRecords() {
@@ -27,6 +27,8 @@ export default function MedicalRecords() {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteRecordId, setDeleteRecordId] = useState<string | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [viewingRecord, setViewingRecord] = useState<MedicalRecord | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const categories = [
     'all',
@@ -97,6 +99,43 @@ export default function MedicalRecords() {
       toast.error('Failed to upload record: ' + error.message);
     } finally {
       setUploading(false);
+    }
+  };
+
+  const handleViewRecord = async (record: MedicalRecord) => {
+    if (record.file_url) {
+      try {
+        const blob = await medicalRecordService.downloadFile(record.id);
+        const url = URL.createObjectURL(blob);
+        window.open(url, '_blank');
+      } catch {
+        setViewingRecord(record);
+      }
+    } else {
+      setViewingRecord(record);
+    }
+  };
+
+  const handleDownloadRecord = async (record: MedicalRecord) => {
+    if (!record.file_url) {
+      toast.error('No file attached to this record');
+      return;
+    }
+    setDownloadingId(record.id);
+    try {
+      const blob = await medicalRecordService.downloadFile(record.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = record.title || 'medical-record';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to download file');
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -253,11 +292,18 @@ export default function MedicalRecords() {
                   )}
 
                   <div className="flex gap-2">
-                    <button className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700">
+                    <button
+                      onClick={() => handleViewRecord(record)}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                    >
                       <Eye /> View
                     </button>
-                    <button className="px-3 py-2 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300">
-                      <Download />
+                    <button
+                      onClick={() => handleDownloadRecord(record)}
+                      disabled={downloadingId === record.id}
+                      className="px-3 py-2 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 disabled:opacity-50"
+                    >
+                      {downloadingId === record.id ? <Loader2 className="animate-spin" /> : <Download />}
                     </button>
                     <button
                       onClick={() => handleDeleteRecord(record.id)}
@@ -287,6 +333,52 @@ export default function MedicalRecords() {
         onConfirm={confirmDeleteRecord}
         loading={deleteLoading}
       />
+
+      {viewingRecord && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 max-w-lg w-full">
+            <h2 className="text-2xl font-bold mb-4">{viewingRecord.title}</h2>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Type:</span>
+                <span className="font-medium capitalize">{viewingRecord.record_type?.replace('-', ' ')}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Date:</span>
+                <span className="font-medium">{new Date(viewingRecord.record_date).toLocaleDateString()}</span>
+              </div>
+              {viewingRecord.description && (
+                <div>
+                  <span className="text-gray-500">Description:</span>
+                  <p className="mt-1 text-gray-700">{viewingRecord.description}</p>
+                </div>
+              )}
+              {viewingRecord.category && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Category:</span>
+                  <span className="font-medium">{viewingRecord.category}</span>
+                </div>
+              )}
+              {viewingRecord.file_url && (
+                <div className="pt-3 border-t">
+                  <button
+                    onClick={() => handleDownloadRecord(viewingRecord)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    <Download /> Download File
+                  </button>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => setViewingRecord(null)}
+              className="mt-6 w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
 
       {showUploadModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
