@@ -12,6 +12,8 @@ import {
 import { proceduresService, Procedure } from '../../../../../services/proceduresService';
 import LocalizedLink from '../../../../../components/LocalizedLink';
 import Footer from '../../../../../components/frontend/Footer';
+import { usePageSeo } from '../../../../../hooks/usePageSeo';
+import { absoluteUrl } from '../../../../../lib/seo';
 
 export default function ProcedureDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -20,6 +22,27 @@ export default function ProcedureDetailPage() {
   const [providers, setProviders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+
+  usePageSeo(
+    procedure
+      ? {
+          title: `${procedure.name} procedure | DoktoChain`,
+          description: (procedure.description || `Learn about ${procedure.name}, find qualified providers, and compare typical costs on DoktoChain.`).slice(0, 300),
+          robots: 'index,follow',
+          jsonLd: {
+            '@context': 'https://schema.org',
+            '@type': 'MedicalProcedure',
+            name: procedure.name,
+            description: procedure.long_description || procedure.description,
+            code: procedure.cpt_code
+              ? { '@type': 'MedicalCode', codeValue: procedure.cpt_code, codingSystem: 'CPT' }
+              : undefined,
+            url: absoluteUrl(`/frontend/browse/procedures/${slug}`),
+          },
+        }
+      : null,
+    [procedure?.id, slug]
+  );
 
   useEffect(() => {
     getUserLocation();
