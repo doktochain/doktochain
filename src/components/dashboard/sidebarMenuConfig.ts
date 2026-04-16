@@ -22,14 +22,7 @@ export interface MenuSection {
 
 export const patientMenu: MenuItem[] = [
   { label: 'patient.dashboard', icon: LayoutDashboard, href: '/dashboard/patient/dashboard' },
-  {
-    label: 'patient.myProfile',
-    icon: User,
-    submenu: [
-      { label: 'patient.myProfileSub', href: '/dashboard/patient/my-profile' },
-      { label: 'patient.healthProfile', href: '/dashboard/patient/profile' },
-    ],
-  },
+  { label: 'patient.myProfile', icon: User, href: '/dashboard/patient/profile' },
   {
     label: 'patient.appointments',
     icon: CalendarDays,
