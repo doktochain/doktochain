@@ -59,6 +59,16 @@ export const patientService = {
     return data;
   },
 
+  async searchPatients(searchTerm: string, limit: number = 10): Promise<any[]> {
+    const term = (searchTerm || '').trim();
+    if (!term) return [];
+    const { data, error } = await api.get<any[]>('/patients/search', {
+      params: { search: term, limit },
+    });
+    if (error) throw new Error(error.message);
+    return Array.isArray(data) ? data : [];
+  },
+
   async createPatient(patientData: Partial<Patient>): Promise<Patient> {
     const { data, error } = await api.post<Patient>('/patients', patientData);
 
