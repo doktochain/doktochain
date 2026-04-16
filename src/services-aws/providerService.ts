@@ -90,13 +90,15 @@ export const providerService = {
     return data;
   },
 
-  async getProviderByUserId(userId: string): Promise<Provider | null> {
-    const { data, error } = await api.get<Provider[]>('/providers', {
-      params: { user_id: userId },
-    });
+  async getProviderByUserId(_userId: string): Promise<Provider | null> {
+    const { data, error, status } = await api.get<Provider>('/providers/me');
 
-    if (error) throw error;
-    return data && data.length > 0 ? data[0] : null;
+    if (status === 404) return null;
+    if (error) {
+      if (error.status === 404) return null;
+      throw error;
+    }
+    return data || null;
   },
 
   async createProvider(providerData: Partial<Provider>): Promise<Provider> {
@@ -127,6 +129,19 @@ export const providerService = {
 
     if (error) throw error;
     return data!;
+  },
+
+  async updateLocation(locationId: string, updates: Partial<ProviderLocation>): Promise<ProviderLocation> {
+    const { data, error } = await api.put<ProviderLocation>(`/provider-locations/${locationId}`, updates);
+
+    if (error) throw error;
+    return data!;
+  },
+
+  async deleteLocation(locationId: string): Promise<void> {
+    const { error } = await api.delete(`/provider-locations/${locationId}`);
+
+    if (error) throw error;
   },
 
   async getSchedule(providerId: string, locationId?: string): Promise<ProviderSchedule[]> {
