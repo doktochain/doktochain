@@ -648,7 +648,7 @@ export const ehrService = {
   },
 
   async getTemplates(templateType?: string, specialty?: string): Promise<any[]> {
-    const params: Record<string, any> = { is_active: true, order: 'usage_count.desc' };
+    const params: Record<string, any> = { is_active: true, order: 'usage_count:desc' };
     if (templateType) {
       params.template_type = templateType;
     }
@@ -659,6 +659,35 @@ export const ehrService = {
     const { data, error } = await api.get<any[]>('/clinical-templates', { params });
     if (error) throw error;
     return data || [];
+  },
+
+  async createTemplate(template: {
+    template_name: string;
+    template_type: string;
+    specialty?: string;
+    description?: string;
+    template_structure?: any;
+    is_system_template?: boolean;
+    created_by?: string;
+  }): Promise<any> {
+    const { data, error } = await api.post<any>('/clinical-templates', {
+      ...template,
+      is_active: true,
+      usage_count: 0,
+    });
+    if (error) throw error;
+    return data;
+  },
+
+  async updateTemplate(templateId: string, updates: Record<string, any>): Promise<any> {
+    const { data, error } = await api.put<any>(`/clinical-templates/${templateId}`, updates);
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteTemplate(templateId: string): Promise<void> {
+    const { error } = await api.delete(`/clinical-templates/${templateId}`);
+    if (error) throw error;
   },
 
   async incrementTemplateUsage(templateId: string): Promise<void> {
