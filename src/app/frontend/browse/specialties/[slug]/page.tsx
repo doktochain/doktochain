@@ -11,6 +11,8 @@ import {
 import { specialtiesService, Specialty } from '../../../../../services/specialtiesService';
 import LocalizedLink from '../../../../../components/LocalizedLink';
 import Footer from '../../../../../components/frontend/Footer';
+import { usePageSeo } from '../../../../../hooks/usePageSeo';
+import { absoluteUrl } from '../../../../../lib/seo';
 
 export default function SpecialtyDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -21,6 +23,24 @@ export default function SpecialtyDetailPage() {
   const [insurances, setInsurances] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'providers' | 'locations' | 'insurance' | 'faq'>('providers');
+
+  usePageSeo(
+    specialty
+      ? {
+          title: `${specialty.name} specialists in Canada | DoktoChain`,
+          description: (specialty.description || `Find trusted ${specialty.name} providers across Canada. Compare availability, reviews, and book an appointment on DoktoChain.`).slice(0, 300),
+          robots: 'index,follow',
+          jsonLd: {
+            '@context': 'https://schema.org',
+            '@type': 'MedicalSpecialty',
+            name: specialty.name,
+            description: specialty.long_description || specialty.description,
+            url: absoluteUrl(`/frontend/browse/specialties/${slug}`),
+          },
+        }
+      : null,
+    [specialty?.id, slug]
+  );
 
   useEffect(() => {
     if (slug) {
