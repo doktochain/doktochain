@@ -304,6 +304,7 @@ export const adminMenu: MenuSection[] = [
       { label: 'admin.procedures', icon: HeartPulse, href: '/dashboard/admin/clinic/procedures' },
       { label: 'admin.products', icon: Pill, href: '/dashboard/admin/clinic/products' },
       { label: 'admin.customManagement', icon: Settings, href: '/dashboard/admin/clinic/custom-management' },
+      { label: 'admin.clinicalTemplates', icon: FileText, href: '/dashboard/admin/clinical-templates' },
     ],
   },
   {
