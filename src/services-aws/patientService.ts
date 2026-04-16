@@ -129,6 +129,11 @@ export const patientService = {
     return data!;
   },
 
+  async deleteMedication(medicationId: string): Promise<void> {
+    const { error } = await api.delete(`/patient-medications/${medicationId}`);
+    if (error) throw new Error(error.message);
+  },
+
   async getEmergencyContacts(patientId: string): Promise<EmergencyContact[]> {
     const { data, error } = await api.get<EmergencyContact[]>(`/patients/${patientId}/emergency-contacts`);
     if (error) throw new Error(error.message);
