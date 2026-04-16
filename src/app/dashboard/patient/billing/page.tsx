@@ -52,15 +52,17 @@ export default function BillingPage() {
     if (!user) return;
     setLoading(true);
 
-    const patient = await patientService.getPatientByUserId(user.id);
-    if (patient) {
-      setPatientId(patient.id);
-      const cards = await patientInsuranceCardService.getPatientInsuranceCards(patient.id);
-      setInsuranceCards(cards);
-    }
+    try {
+      const patient = await patientService.getPatientByUserId(user.id);
+      if (patient) {
+        setPatientId(patient.id);
+        try {
+          const cards = await patientInsuranceCardService.getPatientInsuranceCards(patient.id);
+          setInsuranceCards(cards);
+        } catch {}
+      }
 
-    const [methodsRes, transactionsRes, invoicesRes, claimsRes, balanceRes] =
-      await Promise.all([
+      const results = await Promise.allSettled([
         insuranceBillingService.getPaymentMethods(user.id),
         insuranceBillingService.getBillingTransactions(user.id),
         insuranceBillingService.getInvoices(user.id),
@@ -68,13 +70,18 @@ export default function BillingPage() {
         insuranceBillingService.getOutstandingBalance(user.id),
       ]);
 
-    if (methodsRes.data) setPaymentMethods(methodsRes.data);
-    if (transactionsRes.data) setTransactions(transactionsRes.data);
-    if (invoicesRes.data) setInvoices(invoicesRes.data);
-    if (claimsRes.data) setClaims(claimsRes.data);
-    if (balanceRes.data !== null) setOutstandingBalance(balanceRes.data);
+      const [methodsRes, transactionsRes, invoicesRes, claimsRes, balanceRes] = results;
 
-    setLoading(false);
+      if (methodsRes.status === 'fulfilled' && methodsRes.value.data) setPaymentMethods(methodsRes.value.data);
+      if (transactionsRes.status === 'fulfilled' && transactionsRes.value.data) setTransactions(transactionsRes.value.data);
+      if (invoicesRes.status === 'fulfilled' && invoicesRes.value.data) setInvoices(invoicesRes.value.data);
+      if (claimsRes.status === 'fulfilled' && claimsRes.value.data) setClaims(claimsRes.value.data);
+      if (balanceRes.status === 'fulfilled' && balanceRes.value.data !== null) setOutstandingBalance(balanceRes.value.data);
+    } catch (error) {
+      console.error('Error loading billing data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handlePayNow = () => {
