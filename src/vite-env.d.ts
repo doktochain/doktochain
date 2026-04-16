@@ -10,6 +10,7 @@ interface ImportMetaEnv {
   readonly VITE_S3_BUCKET: string;
   readonly VITE_CLOUDFRONT_DOMAIN: string;
   readonly VITE_AWS_REGION: string;
+  readonly VITE_SITE_URL?: string;
 }
 
 interface ImportMeta {
