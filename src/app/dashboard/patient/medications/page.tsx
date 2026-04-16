@@ -30,22 +30,26 @@ export default function MedicationsPage() {
   const [selectedMedication, setSelectedMedication] = useState<PatientMedication | null>(null);
   const [stats, setStats] = useState<AdherenceStats | null>(null);
   const [medicationsNeedingRefill, setMedicationsNeedingRefill] = useState<PatientMedication[]>([]);
+  const [patientId, setPatientId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
-      loadRefillAlerts();
+      loadPatientAndAlerts();
     }
   }, [user]);
 
-  const loadRefillAlerts = async () => {
+  const loadPatientAndAlerts = async () => {
     if (!user) return;
     try {
-      const { data } = await medicationManagementService.getMedicationsNeedingRefill(user.id, 7);
-      if (data) {
-        setMedicationsNeedingRefill(data);
+      const { patientService } = await import('../../../../services/patientService');
+      const patient = await patientService.getPatientByUserId(user.id);
+      if (patient) {
+        setPatientId(patient.id);
+        const { data } = await medicationManagementService.getMedicationsNeedingRefill(patient.id, 7);
+        if (data) setMedicationsNeedingRefill(data);
       }
     } catch (err) {
-      console.error('Error loading refill alerts:', err);
+      console.error('Error loading medications:', err);
     }
   };
 
@@ -110,7 +114,7 @@ export default function MedicationsPage() {
           <CardContent className="p-6">
             <TabsContent value="list" className="mt-0">
               <MedicationList
-                patientId={user.id}
+                patientId={patientId || user.id}
                 onAddMedication={() => setShowAddModal(true)}
                 onEditMedication={(med) => {
                   setSelectedMedication(med);
@@ -120,11 +124,11 @@ export default function MedicationsPage() {
             </TabsContent>
 
             <TabsContent value="adherence" className="mt-0">
-              <AdherenceTrackingView patientId={user.id} />
+              <AdherenceTrackingView patientId={patientId || user.id} />
             </TabsContent>
 
             <TabsContent value="history" className="mt-0">
-              <MedicationHistoryView patientId={user.id} />
+              <MedicationHistoryView patientId={patientId || user.id} />
             </TabsContent>
           </CardContent>
         </Tabs>
