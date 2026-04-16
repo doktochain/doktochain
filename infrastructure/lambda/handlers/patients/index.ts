@@ -74,7 +74,8 @@ router.put('/profile/:id', async (event, params) => {
   for (const field of allowedFields) {
     if (body[field] !== undefined) {
       updates.push(`${field} = $${paramIndex}`);
-      values.push(body[field]);
+      const val = body[field];
+      values.push(val === '' ? null : val);
       paramIndex++;
     }
   }
@@ -324,7 +325,8 @@ router.put('/:id', async (event, params) => {
   for (const field of allowedFields) {
     if (body[field] !== undefined) {
       updates.push(`${field} = $${paramIndex}`);
-      values.push(body[field]);
+      const val = body[field];
+      values.push(val === '' ? null : val);
       paramIndex++;
     }
   }
