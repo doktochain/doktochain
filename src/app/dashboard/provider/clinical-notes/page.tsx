@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FileText, Plus, Search } from 'lucide-react';
 import { ehrService } from '../../../../services/ehrService';
+import { providerService } from '../../../../services/providerService';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '../../../../components/ui/card';
@@ -17,17 +18,23 @@ export default function ClinicalNotesPage() {
 
   useEffect(() => {
     loadNotes();
-  }, []);
+  }, [user]);
 
   const loadNotes = async () => {
     if (!user) return;
 
     setLoading(true);
     try {
-      const allNotes = await ehrService.getSOAPNotesByProvider(user.id);
-      setNotes(allNotes);
+      const provider = await providerService.getProviderByUserId(user.id);
+      if (!provider) {
+        setNotes([]);
+        return;
+      }
+      const allNotes = await ehrService.getSOAPNotesByProvider(provider.id);
+      setNotes(allNotes || []);
     } catch (error) {
       console.error('Error loading notes:', error);
+      setNotes([]);
     } finally {
       setLoading(false);
     }
