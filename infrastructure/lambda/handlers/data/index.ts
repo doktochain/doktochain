@@ -1,6 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { extractUser } from '../../shared/auth';
-import { withRLS } from '../../shared/db';
+import { withRLS, withServiceRole } from '../../shared/db';
 import {
   success, badRequest, notFound, error,
   parseBody, getOrigin, getQueryParam,
@@ -97,17 +97,19 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     return success(null, origin);
   }
 
-  try {
-    const user = extractUser(event);
-    if (!user) {
-      return error('Authentication required', 401, origin);
-    }
+  const PUBLIC_READ_TABLES = new Set([
+    'subscription_plans', 'cms_pages', 'cms_blogs', 'cms_testimonials',
+    'cms_faqs', 'cms_faq_categories', 'cms_blog_categories', 'cms_blog_tags',
+    'cms_locations_content', 'specialties_master', 'medical_services',
+  ]);
 
-    const pathMatch = path.match(/^\/data\/([a-z0-9-]+)(?:\/([a-z0-9-]+))?$/);
+  try {
+    const pathMatch = path.match(/^\/(?:public-)?data\/([a-z0-9-]+)(?:\/([a-z0-9-]+))?$/);
     if (!pathMatch) {
       return badRequest('Invalid path format. Expected /data/{table} or /data/{table}/{id}', origin);
     }
 
+    const isPublicPath = path.startsWith('/public-data/');
     const tableKebab = pathMatch[1];
     const recordId = pathMatch[2];
     const table = kebabToSnake(tableKebab);
@@ -116,7 +118,24 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       return badRequest(`Table '${table}' is not accessible`, origin);
     }
 
-    const data = await withRLS(user.userId, user.role, user.claims, async (client) => {
+    if (isPublicPath && !PUBLIC_READ_TABLES.has(table)) {
+      return badRequest(`Table '${table}' is not publicly accessible`, origin);
+    }
+
+    if (isPublicPath && method !== 'GET') {
+      return error('Public endpoint only supports GET', 405, origin);
+    }
+
+    const user = extractUser(event);
+    if (!user && !isPublicPath) {
+      return error('Authentication required', 401, origin);
+    }
+
+    const dbFn = user
+      ? (fn: (client: any) => Promise<any>) => withRLS(user.userId, user.role, user.claims, fn)
+      : withServiceRole;
+
+    const data = await dbFn(async (client) => {
       switch (method) {
         case 'GET': {
           if (recordId) {
