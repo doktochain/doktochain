@@ -11,6 +11,8 @@ interface ImportMetaEnv {
   readonly VITE_CLOUDFRONT_DOMAIN: string;
   readonly VITE_AWS_REGION: string;
   readonly VITE_SITE_URL?: string;
+  readonly VITE_GSC_VERIFICATION?: string;
+  readonly VITE_BING_VERIFICATION?: string;
 }
 
 interface ImportMeta {
