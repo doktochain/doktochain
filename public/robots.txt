@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+Disallow: /dashboard/
+Disallow: /en/dashboard/
+Disallow: /fr/dashboard/
+
+Sitemap: https://doktochain.ca/sitemap.xml
