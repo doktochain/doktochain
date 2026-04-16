@@ -49,7 +49,7 @@ export const medicalRecordService = {
       fileSizeBytes = file.size;
     }
 
-    const { data, error } = await api.post<MedicalRecord>('/medical-records', {
+    const { data, error } = await api.post<MedicalRecord>('/health-records', {
       patient_id: patientId,
       ...recordData,
       file_url: fileUrl,
@@ -107,7 +107,7 @@ export const medicalRecordService = {
   },
 
   async getMedicalRecord(recordId: string, providerId?: string): Promise<MedicalRecord | null> {
-    const { data, error } = await api.get<MedicalRecord>(`/medical-records/${recordId}`);
+    const { data, error } = await api.get<MedicalRecord>(`/health-records/${recordId}`);
 
     if (error) throw new Error(error.message);
 
@@ -140,7 +140,7 @@ export const medicalRecordService = {
       }
     }
 
-    const { data, error } = await api.put<MedicalRecord>(`/medical-records/${recordId}`, updates);
+    const { data, error } = await api.put<MedicalRecord>(`/health-records/${recordId}`, updates);
 
     if (error) throw new Error(error.message);
 
@@ -160,11 +160,11 @@ export const medicalRecordService = {
       try {
         const urlParts = record.file_url.split('/');
         const path = urlParts.slice(-2).join('/');
-        await storageService.deleteFile('medical-records', path);
+        await storageService.deleteFile('health-records', path);
       } catch {}
     }
 
-    const { error } = await api.delete(`/medical-records/${recordId}`);
+    const { error } = await api.delete(`/health-records/${recordId}`);
 
     if (error) throw new Error(error.message);
 
@@ -176,7 +176,7 @@ export const medicalRecordService = {
   },
 
   async shareMedicalRecord(recordId: string, providerId: string, patientId?: string): Promise<void> {
-    const { error } = await api.post(`/medical-records/${recordId}/share`, {
+    const { error } = await api.post(`/health-records/${recordId}/share`, {
       provider_id: providerId,
     });
 
@@ -206,9 +206,15 @@ export const medicalRecordService = {
       } catch {}
     }
 
-    const urlParts = record.file_url.split('/');
-    const path = urlParts.slice(-2).join('/');
-
-    return await storageService.downloadFile('medical-records', path);
+    try {
+      const url = new URL(record.file_url);
+      const s3Key = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
+      const { storageClient } = await import('../lib/storage-client');
+      return await storageClient.downloadFile(s3Key);
+    } catch {
+      const urlParts = record.file_url.split('/');
+      const path = urlParts.slice(-2).join('/');
+      return await storageService.downloadFile('medical-records', path);
+    }
   },
 };
