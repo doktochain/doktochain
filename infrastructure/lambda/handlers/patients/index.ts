@@ -97,10 +97,99 @@ router.put('/profile/:id', async (event, params) => {
   return success(data, origin);
 });
 
+router.get('/search', async (event) => {
+  const origin = getOrigin(event.headers);
+  const user = requireRole(event, 'provider', 'admin', 'clinic');
+
+  const search = (getQueryParam(event.queryStringParameters, 'search') || '').trim();
+  const limitRaw = parseInt(getQueryParam(event.queryStringParameters, 'limit') || '10', 10);
+  const limit = Math.max(1, Math.min(50, isNaN(limitRaw) ? 10 : limitRaw));
+
+  if (!search) return success([], origin);
+
+  const data = await withRLS(user.userId, user.role, user.claims, async (client) => {
+    const params: unknown[] = [];
+    let where = ' WHERE 1=1';
+
+    const isDate = /^\d{4}-\d{2}-\d{2}$/.test(search);
+    const lower = `%${search.toLowerCase()}%`;
+
+    if (isDate) {
+      params.push(search);
+      where += ` AND up.date_of_birth = $${params.length}`;
+    } else {
+      params.push(lower);
+      params.push(search);
+      where +=
+        ` AND (LOWER(up.first_name) LIKE $1 OR LOWER(up.last_name) LIKE $1 ` +
+        `OR LOWER(up.email) LIKE $1 OR LOWER(COALESCE(up.first_name,'') || ' ' || COALESCE(up.last_name,'')) LIKE $1 ` +
+        `OR p.health_card_number = $2)`;
+    }
+
+    params.push(limit);
+    const r = await client.query(
+      `SELECT p.id, p.user_id, p.health_card_number, p.health_card_province,
+              up.first_name, up.last_name, up.email, up.phone,
+              up.date_of_birth, up.gender, up.profile_photo_url
+       FROM patients p
+       JOIN user_profiles up ON p.user_id = up.id
+       ${where}
+       ORDER BY up.last_name NULLS LAST, up.first_name NULLS LAST
+       LIMIT $${params.length}`,
+      params
+    );
+    return r.rows;
+  });
+
+  return success(data, origin);
+});
+
 router.get('/', async (event) => {
   const origin = getOrigin(event.headers);
   const user = requireAuth(event);
-  
+
+  const search = (getQueryParam(event.queryStringParameters, 'search') || '').trim();
+  const limitRaw = parseInt(getQueryParam(event.queryStringParameters, 'limit') || '10', 10);
+  const limit = Math.max(1, Math.min(50, isNaN(limitRaw) ? 10 : limitRaw));
+
+  if (search && (user.role === 'provider' || user.role === 'admin' || user.role === 'clinic')) {
+    const data = await withRLS(user.userId, user.role, user.claims, async (client) => {
+      const params: unknown[] = [];
+      let where = ' WHERE 1=1';
+
+      const isDate = /^\d{4}-\d{2}-\d{2}$/.test(search);
+      const lower = `%${search.toLowerCase()}%`;
+
+      if (isDate) {
+        params.push(search);
+        where += ` AND up.date_of_birth = $${params.length}`;
+      } else {
+        params.push(lower);
+        params.push(search);
+        where +=
+          ` AND (LOWER(up.first_name) LIKE $1 OR LOWER(up.last_name) LIKE $1 ` +
+          `OR LOWER(up.email) LIKE $1 OR LOWER(COALESCE(up.first_name,'') || ' ' || COALESCE(up.last_name,'')) LIKE $1 ` +
+          `OR p.health_card_number = $2)`;
+      }
+
+      params.push(limit);
+      const r = await client.query(
+        `SELECT p.id, p.user_id, p.health_card_number, p.health_card_province,
+                up.first_name, up.last_name, up.email, up.phone,
+                up.date_of_birth, up.gender, up.profile_photo_url
+         FROM patients p
+         JOIN user_profiles up ON p.user_id = up.id
+         ${where}
+         ORDER BY up.last_name NULLS LAST, up.first_name NULLS LAST
+         LIMIT $${params.length}`,
+        params
+      );
+      return r.rows;
+    });
+
+    return success(data, origin);
+  }
+
   const result = await withRLS(user.userId, user.role, user.claims, async (client) => {
     const r = await client.query(
       `SELECT p.*, up.first_name, up.last_name, up.email, up.phone,
@@ -113,7 +202,7 @@ router.get('/', async (event) => {
     );
     return r.rows[0] || null;
   });
-  
+
   return success(result, origin);
 });
 
