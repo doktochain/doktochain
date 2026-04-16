@@ -100,6 +100,7 @@ const ProviderAppointmentHistory = lazy(() => import('./app/dashboard/provider/a
 const ProviderPrescriptions = lazy(() => import('./app/dashboard/provider/prescriptions/page'));
 const CreatePrescription = lazy(() => import('./app/dashboard/provider/prescriptions/create/page'));
 const ProviderRefillRequests = lazy(() => import('./app/dashboard/provider/prescriptions/refills/page'));
+const EditPrescription = lazy(() => import('./app/dashboard/provider/prescriptions/edit/[id]/page'));
 const ProviderSchedule = lazy(() => import('./app/dashboard/provider/schedule/page'));
 const ProviderDashboard = lazy(() => import('./app/dashboard/provider/dashboard/page'));
 const ProviderProfile = lazy(() => import('./app/dashboard/provider/profile/page'));
@@ -149,6 +150,7 @@ const AdminClinicAssets = lazy(() => import('./app/dashboard/admin/clinic/assets
 const AdminClinicProcedures = lazy(() => import('./app/dashboard/admin/clinic/procedures/page'));
 const AdminClinicProducts = lazy(() => import('./app/dashboard/admin/clinic/products/page'));
 const AdminClinicCustomManagement = lazy(() => import('./app/dashboard/admin/clinic/custom-management/page'));
+const AdminClinicalTemplates = lazy(() => import('./app/dashboard/admin/clinical-templates/page'));
 const AdminClinicsPage = lazy(() => import('./app/dashboard/admin/clinic/clinics/page'));
 const AdminClinicApplications = lazy(() => import('./app/dashboard/admin/clinic/clinic-applications/page'));
 const AdminProviderSchedule = lazy(() => import('./app/dashboard/admin/clinic/providers/[id]/schedule/page'));
@@ -335,6 +337,7 @@ function App() {
                 <Route path="dashboard/provider/prescriptions" element={<ProtectedRoute allowedRoles={['provider']}><DashboardLayout><ProviderPrescriptions /></DashboardLayout></ProtectedRoute>} />
                 <Route path="dashboard/provider/prescriptions/create" element={<ProtectedRoute allowedRoles={['provider']}><DashboardLayout><CreatePrescription /></DashboardLayout></ProtectedRoute>} />
                 <Route path="dashboard/provider/prescriptions/refills" element={<ProtectedRoute allowedRoles={['provider']}><DashboardLayout><ProviderRefillRequests /></DashboardLayout></ProtectedRoute>} />
+                <Route path="dashboard/provider/prescriptions/edit/:id" element={<ProtectedRoute allowedRoles={['provider']}><DashboardLayout><EditPrescription /></DashboardLayout></ProtectedRoute>} />
                 <Route path="dashboard/provider/schedule" element={<ProtectedRoute allowedRoles={['provider']}><DashboardLayout><ProviderSchedule /></DashboardLayout></ProtectedRoute>} />
                 <Route path="dashboard/provider/profile" element={<ProtectedRoute allowedRoles={['provider']}><DashboardLayout><ProviderProfile /></DashboardLayout></ProtectedRoute>} />
                 <Route path="dashboard/provider/locations" element={<ProtectedRoute allowedRoles={['provider']}><DashboardLayout><ProviderLocations /></DashboardLayout></ProtectedRoute>} />
@@ -386,6 +389,7 @@ function App() {
                 <Route path="dashboard/admin/clinic/procedures" element={<ProtectedRoute allowedRoles={['admin']}><DashboardLayout><AdminClinicProcedures /></DashboardLayout></ProtectedRoute>} />
                 <Route path="dashboard/admin/clinic/products" element={<ProtectedRoute allowedRoles={['admin']}><DashboardLayout><AdminClinicProducts /></DashboardLayout></ProtectedRoute>} />
                 <Route path="dashboard/admin/clinic/custom-management" element={<ProtectedRoute allowedRoles={['admin']}><DashboardLayout><AdminClinicCustomManagement /></DashboardLayout></ProtectedRoute>} />
+                <Route path="dashboard/admin/clinical-templates" element={<ProtectedRoute allowedRoles={['admin']}><DashboardLayout><AdminClinicalTemplates /></DashboardLayout></ProtectedRoute>} />
 
                 <Route path="dashboard/admin/hrm/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><DashboardLayout><HRMDashboard /></DashboardLayout></ProtectedRoute>} />
                 <Route path="dashboard/admin/hrm/departments" element={<ProtectedRoute allowedRoles={['admin']}><DashboardLayout><HRMDepartments /></DashboardLayout></ProtectedRoute>} />
