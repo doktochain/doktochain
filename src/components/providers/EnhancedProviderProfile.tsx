@@ -3,6 +3,8 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { Calendar, X, Stethoscope } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { providerReviewService, ReviewStats } from '../../services/providerReviewService';
+import { usePageSeo } from '../../hooks/usePageSeo';
+import { absoluteUrl } from '../../lib/seo';
 import ComprehensiveBookingWizard from '../booking/ComprehensiveBookingWizard';
 import ProviderReviews from './ProviderReviews';
 import ProviderProfileHeader from './ProviderProfileHeader';
@@ -41,6 +43,40 @@ export default function EnhancedProviderProfile() {
   useEffect(() => {
     if (slug) loadProviderDetails(slug);
   }, [slug]);
+
+  const providerName = provider?.user_profiles
+    ? `${provider.user_profiles.first_name ?? ''} ${provider.user_profiles.last_name ?? ''}`.trim()
+    : '';
+  const providerTitle = provider?.professional_title || 'Healthcare provider';
+  const primarySpecialty = specialties?.[0]?.specialties_master?.name || provider?.specialty || '';
+
+  usePageSeo(
+    provider
+      ? {
+          title: `${providerName || providerTitle} | ${primarySpecialty || 'DoktoChain provider'} | DoktoChain`,
+          description: `Book appointments with ${providerName || providerTitle}${primarySpecialty ? ` (${primarySpecialty})` : ''} on DoktoChain. View credentials, locations, services, and reviews.`.slice(0, 300),
+          robots: 'index,follow',
+          image: provider.user_profiles?.profile_photo_url || undefined,
+          jsonLd: {
+            '@context': 'https://schema.org',
+            '@type': 'Physician',
+            name: providerName || providerTitle,
+            image: provider.user_profiles?.profile_photo_url,
+            medicalSpecialty: primarySpecialty || undefined,
+            url: absoluteUrl(`/frontend/provider-profile/${slug}`),
+            aggregateRating:
+              reviewStats && reviewStats.totalReviews > 0
+                ? {
+                    '@type': 'AggregateRating',
+                    ratingValue: reviewStats.averageRating,
+                    reviewCount: reviewStats.totalReviews,
+                  }
+                : undefined,
+          },
+        }
+      : null,
+    [provider?.id, providerName, primarySpecialty, reviewStats?.totalReviews]
+  );
 
   const loadProviderDetails = async (providerId: string) => {
     try {
