@@ -54,7 +54,7 @@ router.post('/presign-upload', async (event) => {
   }
 
   const ext = body.fileName.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
-  const key = `${body.prefix}/${user.userId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+  const key = `storage/${body.prefix}/${user.userId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
 
   const command = new PutObjectCommand({
     Bucket: BUCKET,
@@ -69,7 +69,8 @@ router.post('/presign-upload', async (event) => {
 
   const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
 
-  return created({ uploadUrl, key, expiresIn: 300 }, origin);
+  const publicUrl = `https://d1pcyuvbqz55za.cloudfront.net/${key}`;
+return created({ uploadUrl, key, publicUrl, expiresIn: 300 }, origin);
 });
 
 router.post('/presign-download', async (event) => {
@@ -97,7 +98,7 @@ router.post('/delete', async (event) => {
   }
 
   const keyParts = body.key.split('/');
-  const ownerSegment = keyParts.length >= 2 ? keyParts[1] : '';
+  const ownerSegment = keyParts.length >= 3 ? keyParts[2] : (keyParts.length >= 2 ? keyParts[1] : '');
   if (ownerSegment !== user.userId && user.role !== 'admin') {
     return badRequest('You can only delete your own files', origin);
   }
@@ -116,7 +117,7 @@ router.get('/list', async (event) => {
   const origin = getOrigin(event.headers);
   const user = requireAuth(event);
   const prefix = getQueryParam(event.queryStringParameters, 'prefix') || '';
-  const folder = `${prefix}/${user.userId}/`;
+  const folder = `storage/${prefix}/${user.userId}/`;
 
   const command = new ListObjectsV2Command({
     Bucket: BUCKET,
