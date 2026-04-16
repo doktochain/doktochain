@@ -6,6 +6,7 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import LanguageRouter from './components/LanguageRouter';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { RouteErrorBoundary } from './components/ui/RouteErrorBoundary';
+import { DynamicSeo } from './components/seo/DynamicSeo';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -265,6 +266,7 @@ function App() {
       <Toaster position="top-right" richColors closeButton />
       <BrowserRouter>
         <LanguageProvider>
+          <DynamicSeo />
           <ScrollToTop />
           <RouteErrorBoundary>
           <Suspense fallback={<FallbackSpinner />}>
