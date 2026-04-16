@@ -208,7 +208,7 @@ export const insuranceBillingService = {
   }> {
     try {
       const { data, error } = await api.get<PaymentMethod[]>('/payment-methods', {
-        params: { patient_id: patientId, is_active: true, order: 'is_default.desc' },
+        params: { user_id: patientId, is_active: true, order: 'is_default.desc' },
       });
 
       if (error) throw error;
@@ -278,7 +278,7 @@ export const insuranceBillingService = {
   }> {
     try {
       const { data, error } = await api.get<BillingTransaction[]>('/billing-transactions', {
-        params: { patient_id: patientId, order: 'transaction_date.desc', limit },
+        params: { user_id: patientId, order: 'transaction_date.desc', limit },
       });
 
       if (error) throw error;
