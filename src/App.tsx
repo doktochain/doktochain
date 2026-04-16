@@ -68,8 +68,7 @@ const AdminLoginPage = lazy(() => import('./app/auth/admin-login/page'));
 const RegisterPage = lazy(() => import('./app/auth/register/page'));
 
 const PatientDashboard = lazy(() => import('./app/dashboard/patient/dashboard/page'));
-const PatientProfile = lazy(() => import('./app/dashboard/patient/profile/page'));
-const PatientMyProfile = lazy(() => import('./app/dashboard/patient/my-profile/page'));
+const PatientProfile = lazy(() => import('./app/dashboard/patient/my-profile/page'));
 const PatientAppointments = lazy(() => import('./app/dashboard/patient/appointments/page'));
 const BookAppointment = lazy(() => import('./app/dashboard/patient/appointments/book/page'));
 const AppointmentHistory = lazy(() => import('./app/dashboard/patient/appointments/history/page'));
@@ -302,7 +301,7 @@ function App() {
 
                 <Route path="dashboard/patient/dashboard" element={<ProtectedRoute allowedRoles={['patient']}><DashboardLayout><PatientDashboard /></DashboardLayout></ProtectedRoute>} />
                 <Route path="dashboard/patient/profile" element={<ProtectedRoute allowedRoles={['patient']}><DashboardLayout><PatientProfile /></DashboardLayout></ProtectedRoute>} />
-                <Route path="dashboard/patient/my-profile" element={<ProtectedRoute allowedRoles={['patient']}><DashboardLayout><PatientMyProfile /></DashboardLayout></ProtectedRoute>} />
+                <Route path="dashboard/patient/my-profile" element={<Navigate to="../profile" replace />} />
                 <Route path="dashboard/patient/appointments" element={<ProtectedRoute allowedRoles={['patient']}><DashboardLayout><PatientAppointments /></DashboardLayout></ProtectedRoute>} />
                 <Route path="dashboard/patient/appointments/book" element={<ProtectedRoute allowedRoles={['patient']}><DashboardLayout><BookAppointment /></DashboardLayout></ProtectedRoute>} />
                 <Route path="dashboard/patient/appointments/history" element={<ProtectedRoute allowedRoles={['patient']}><DashboardLayout><AppointmentHistory /></DashboardLayout></ProtectedRoute>} />
