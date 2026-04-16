@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Plus, CreditCard as Edit2, Trash2, Clock, Phone, Globe, Loader2, X, Star } from 'lucide-react';
+import { MapPin, Plus, CreditCard as Edit2, Trash2, Phone, Loader2, X, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { providerService, ProviderLocation } from '../../../../services/providerService';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { ConfirmDialog } from '../../../../components/ui/confirm-dialog';
+import AddressMap from '../../../../components/maps/AddressMap';
 
 const PROVINCES = [
   { code: 'ON', name: 'Ontario' },
@@ -112,42 +113,36 @@ export default function ClinicLocationsPage() {
     setSaving(true);
     try {
       if (editingLocation) {
-        await providerService.addLocation({
+        await providerService.updateLocation(editingLocation.id, {
           ...formData,
-          id: editingLocation.id,
           provider_id: providerId,
         });
+        toast.success('Location updated');
       } else {
         await providerService.addLocation({
           ...formData,
           provider_id: providerId,
         });
+        toast.success('Location added');
       }
       setShowModal(false);
       await loadLocations();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving location:', error);
-      toast.error('Failed to save location');
+      toast.error(error?.message || 'Failed to save location');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = (locationId: string) => {
-    setDeleteTargetId(locationId);
-  };
-
   const executeDelete = async (locationId: string) => {
     try {
-      const { error } = await (await import('../../../../lib/supabase')).supabase
-        .from('provider_locations')
-        .delete()
-        .eq('id', locationId);
-      if (error) throw error;
+      await providerService.deleteLocation(locationId);
+      toast.success('Location removed');
       await loadLocations();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting location:', error);
-      toast.error('Failed to delete location');
+      toast.error(error?.message || 'Failed to delete location');
     }
   };
 
@@ -271,6 +266,16 @@ export default function ClinicLocationsPage() {
                     </a>
                   </div>
                 )}
+
+                <AddressMap
+                  addressLine1={location.address_line1}
+                  addressLine2={location.address_line2}
+                  city={location.city}
+                  province={location.province}
+                  postalCode={location.postal_code}
+                  height={180}
+                  className="mt-2"
+                />
               </div>
             </div>
           ))}
