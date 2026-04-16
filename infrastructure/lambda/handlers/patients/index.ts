@@ -290,6 +290,48 @@ router.get('/:id/emergency-contacts', async (event, params) => {
   return success(data, origin);
 });
 
+router.post('/:id/emergency-contacts', async (event, params) => {
+  const origin = getOrigin(event.headers);
+  const user = requireAuth(event);
+  const body = parseBody<{
+    name: string;
+    relationship: string;
+    phone: string;
+    email?: string;
+    is_primary?: boolean;
+  }>(event.body);
+
+  if (!body.name || !body.relationship || !body.phone) {
+    return badRequest('Name, relationship, and phone are required', origin);
+  }
+
+  const data = await withRLS(user.userId, user.role, user.claims, async (client) => {
+    const result = await client.query(
+      `INSERT INTO emergency_contacts (patient_id, name, relationship, phone, email, is_primary)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [params.id, body.name, body.relationship, body.phone, body.email || null, body.is_primary || false]
+    );
+    return result.rows[0];
+  });
+
+  return created(data, origin);
+});
+
+router.delete('/:id/emergency-contacts/:contactId', async (event, params) => {
+  const origin = getOrigin(event.headers);
+  const user = requireAuth(event);
+
+  await withRLS(user.userId, user.role, user.claims, async (client) => {
+    await client.query(
+      `DELETE FROM emergency_contacts WHERE id = $1 AND patient_id = $2`,
+      [params.contactId, params.id]
+    );
+  });
+
+  return noContent(origin);
+});
+
 router.get('/:id/insurance-cards', async (event, params) => {
   const origin = getOrigin(event.headers);
   const user = requireAuth(event);
