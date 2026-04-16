@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../../../../contexts/AuthContext';
-import { User, Mail, Phone, MapPin, Save, Camera, ArrowLeft, CreditCard, Heart, Pill, AlertTriangle, Shield, Plus, Trash2, CreditCard as Edit2, X } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Save, Camera, ArrowLeft, CreditCard, Heart, Pill, AlertTriangle, Shield, Plus, Trash2, Pencil, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { patientService, Patient, PatientAllergy, PatientMedication, EmergencyContact } from '../../../../services/patientService';
 import InsuranceCardManager from '../../../../components/patient/InsuranceCardManager';
@@ -72,6 +72,7 @@ export default function MyProfile() {
   const [showAddContactModal, setShowAddContactModal] = useState(false);
   const [showAddAllergyModal, setShowAddAllergyModal] = useState(false);
   const [showAddMedicationModal, setShowAddMedicationModal] = useState(false);
+  const [editingMedication, setEditingMedication] = useState<PatientMedication | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [confirmDialogConfig, setConfirmDialogConfig] = useState<{
     title: string;
@@ -273,9 +274,14 @@ export default function MyProfile() {
       title: 'Remove Allergy',
       description: 'Remove this allergy?',
       onConfirm: async () => {
-        await patientService.deleteAllergy(id, patient! .id);
-        setAllergies(prev => prev.filter(a => a.id !== id));
-        setConfirmDialogOpen(false);
+        try {
+          await patientService.deleteAllergy(id, patient!.id);
+          setAllergies(prev => prev.filter(a => a.id !== id));
+        } catch (err: any) {
+          setMessage({ type: 'error', text: err.message || 'Failed to delete allergy' });
+        } finally {
+          setConfirmDialogOpen(false);
+        }
       },
     });
     setConfirmDialogOpen(true);
@@ -283,12 +289,44 @@ export default function MyProfile() {
 
   const handleAddMedication = async (data: { medication_name: string; dosage: string; frequency: string; start_date: string; prescribing_doctor?: string }) => {
     if (!patient) return;
-    await patientService.addMedication(patient.id, {
-      ...data,
-      prescribing_provider: data.prescribing_doctor,
+    if (editingMedication) {
+      await patientService.updateMedication(editingMedication.id, {
+        medication_name: data.medication_name,
+        dosage: data.dosage,
+        frequency: data.frequency,
+        start_date: data.start_date,
+        prescribing_provider: data.prescribing_doctor,
+      });
+      setEditingMedication(null);
+      setMedications(await patientService.getCurrentMedications(patient.id));
+      setMessage({ type: 'success', text: 'Medication updated!' });
+    } else {
+      await patientService.addMedication(patient.id, {
+        ...data,
+        prescribing_provider: data.prescribing_doctor,
+      });
+      setMedications(await patientService.getCurrentMedications(patient.id));
+      setMessage({ type: 'success', text: 'Medication added!' });
+    }
+  };
+
+  const handleDeleteMedication = (id: string) => {
+    setConfirmDialogConfig({
+      title: 'Delete Medication',
+      description: 'Permanently delete this medication record?',
+      onConfirm: async () => {
+        try {
+          await patientService.deleteMedication(id);
+          setMedications(prev => prev.filter(m => m.id !== id));
+          setMessage({ type: 'success', text: 'Medication deleted' });
+        } catch (err: any) {
+          setMessage({ type: 'error', text: err.message || 'Failed to delete medication' });
+        } finally {
+          setConfirmDialogOpen(false);
+        }
+      },
     });
-    setMedications(await patientService.getCurrentMedications(patient.id));
-    setMessage({ type: 'success', text: 'Medication added!' });
+    setConfirmDialogOpen(true);
   };
 
   const handleStopMedication = (id: string) => {
@@ -296,9 +334,14 @@ export default function MyProfile() {
       title: 'Stop Medication',
       description: 'Mark this medication as stopped?',
       onConfirm: async () => {
-        await patientService.updateMedication(id, { is_active: false, end_date: new Date().toISOString().split('T')[0] });
-        if (patient) setMedications(await patientService.getCurrentMedications(patient.id));
-        setConfirmDialogOpen(false);
+        try {
+          await patientService.updateMedication(id, { is_active: false, end_date: new Date().toISOString().split('T')[0] });
+          if (patient) setMedications(await patientService.getCurrentMedications(patient.id));
+        } catch (err: any) {
+          setMessage({ type: 'error', text: err.message || 'Failed to stop medication' });
+        } finally {
+          setConfirmDialogOpen(false);
+        }
       },
     });
     setConfirmDialogOpen(true);
@@ -316,9 +359,14 @@ export default function MyProfile() {
       title: 'Remove Emergency Contact',
       description: 'Remove this emergency contact?',
       onConfirm: async () => {
-        await patientService.deleteEmergencyContact(id);
-        setEmergencyContacts(prev => prev.filter(c => c.id !== id));
-        setConfirmDialogOpen(false);
+        try {
+          await patientService.deleteEmergencyContact(id);
+          setEmergencyContacts(prev => prev.filter(c => c.id !== id));
+        } catch (err: any) {
+          setMessage({ type: 'error', text: err.message || 'Failed to delete contact' });
+        } finally {
+          setConfirmDialogOpen(false);
+        }
       },
     });
     setConfirmDialogOpen(true);
@@ -514,7 +562,7 @@ export default function MyProfile() {
                   </h3>
                   {patient && (
                     <Button variant="outline" onClick={() => setShowEditHealthModal(true)} className="flex items-center gap-2 text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200">
-                      <Edit2 className="w-4 h-4" />
+                      <Pencil className="w-4 h-4" />
                       Edit Health Profile
                     </Button>
                   )}
@@ -687,10 +735,19 @@ export default function MyProfile() {
                             {med.prescribing_provider && <span>By: {med.prescribing_provider}</span>}
                           </div>
                         </div>
-                        <Button variant="outline" onClick={() => handleStopMedication(med.id)}
-                          className="px-3 py-1.5 text-sm text-red-600 bg-red-50 hover:bg-red-100 border-red-200">
-                          Stop
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => {
+                              setEditingMedication(med);
+                              setShowAddMedicationModal(true);
+                            }}
+                            className="p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-lg">
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleDeleteMedication(med.id)}
+                            className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -724,7 +781,17 @@ export default function MyProfile() {
         <AddAllergyModal onClose={() => setShowAddAllergyModal(false)} onSave={handleAddAllergy} />
       )}
       {showAddMedicationModal && (
-        <AddMedicationModal onClose={() => setShowAddMedicationModal(false)} onSave={handleAddMedication} />
+        <AddMedicationModal
+          onClose={() => { setShowAddMedicationModal(false); setEditingMedication(null); }}
+          onSave={handleAddMedication}
+          initialData={editingMedication ? {
+            medication_name: editingMedication.medication_name,
+            dosage: editingMedication.dosage,
+            frequency: editingMedication.frequency,
+            start_date: editingMedication.start_date,
+            prescribing_doctor: editingMedication.prescribing_provider,
+          } : undefined}
+        />
       )}
     </div>
     <ConfirmDialog
