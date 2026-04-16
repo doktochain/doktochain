@@ -218,7 +218,8 @@ router.get('/appointments', async (event) => {
 const ALLOWED_CRUD_TABLES = [
   'medical_services', 'procedures_master', 'products_master',
   'clinic_locations', 'medical_assets', 'insurance_providers',
-  'specialties_master', 'admin_audit_log', 'insurance_providers_master', 'provider_availability'
+  'specialties_master', 'admin_audit_log', 'insurance_providers_master', 'provider_availability',
+  'clinical_templates'
 ];
 
 router.get('/crud/:table', async (event, params) => {
