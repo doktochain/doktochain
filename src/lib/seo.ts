@@ -1,5 +1,7 @@
 const FALLBACK_ORIGIN = 'https://doktochain.ca';
 
+const OG_IMAGE_PATH = '/image/og-cover-1200x630.png';
+
 export function getSiteOrigin(): string {
   const env = import.meta.env.VITE_SITE_URL as string | undefined;
   if (env && /^https?:\/\//i.test(env)) {
@@ -17,10 +19,15 @@ export function absoluteUrl(path: string): string {
   return `${origin}${p}`;
 }
 
+export function getDefaultOgImage(): string {
+  return absoluteUrl(OG_IMAGE_PATH);
+}
+
 export type SeoEntry = {
   title: string;
   description: string;
   robots: 'index,follow' | 'noindex,nofollow';
+  image?: string;
   jsonLd?: Record<string, unknown>;
 };
 
@@ -30,6 +37,49 @@ const DEFAULT_SEO: SeoEntry = {
     'Book appointments, access medical records, and connect with healthcare providers across Canada. Secure, compliant care.',
   robots: 'index,follow',
 };
+
+function buildMedicalOrganizationJsonLd(): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'WebSite',
+        '@id': absoluteUrl('/#website'),
+        url: absoluteUrl('/'),
+        name: 'DoktoChain',
+        description: DEFAULT_SEO.description,
+        inLanguage: ['en-CA', 'fr-CA'],
+        publisher: { '@id': absoluteUrl('/#organization') },
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: {
+            '@type': 'EntryPoint',
+            urlTemplate: `${absoluteUrl('/en/frontend/find-providers')}?q={search_term_string}`,
+          },
+          'query-input': 'required name=search_term_string',
+        },
+      },
+      {
+        '@type': 'MedicalOrganization',
+        '@id': absoluteUrl('/#organization'),
+        name: 'DoktoChain',
+        url: absoluteUrl('/'),
+        logo: {
+          '@type': 'ImageObject',
+          url: absoluteUrl('/image/doktochain_logo.png'),
+        },
+        image: absoluteUrl(OG_IMAGE_PATH),
+        description: DEFAULT_SEO.description,
+        address: {
+          '@type': 'PostalAddress',
+          addressCountry: 'CA',
+        },
+        areaServed: { '@type': 'Country', name: 'Canada' },
+        sameAs: [],
+      },
+    ],
+  };
+}
 
 function stripLangPrefix(pathname: string): string {
   const m = pathname.match(/^\/(en|fr)(\/.*)?$/);
@@ -72,18 +122,7 @@ export function resolveSeo(pathname: string): SeoEntry {
       prefix: '/',
       seo: {
         ...DEFAULT_SEO,
-        jsonLd: {
-          '@context': 'https://schema.org',
-          '@type': 'WebSite',
-          name: 'DoktoChain',
-          url: absoluteUrl('/'),
-          description: DEFAULT_SEO.description,
-          publisher: {
-            '@type': 'Organization',
-            name: 'DoktoChain',
-            url: absoluteUrl('/'),
-          },
-        },
+        jsonLd: buildMedicalOrganizationJsonLd(),
       },
     },
     {
@@ -221,7 +260,7 @@ export function upsertMeta(attr: 'name' | 'property', key: string, content: stri
 }
 
 export function upsertLinkRel(rel: string, href: string) {
-  let el = document.head.querySelector(`link[rel="${rel}"]`) as HTMLLinkElement | null;
+  let el = document.head.querySelector(`link[rel="${rel}"]:not([hreflang])`) as HTMLLinkElement | null;
   if (!el) {
     el = document.createElement('link');
     el.setAttribute('rel', rel);
@@ -244,4 +283,67 @@ export function setJsonLd(id: string, data: Record<string, unknown> | null) {
     document.head.appendChild(el);
   }
   el.textContent = json;
+}
+
+export function getLocaleAlternates(pathname: string): { hreflang: string; href: string }[] {
+  const path = stripLangPrefix(pathname) || '/';
+  if (path.startsWith('/dashboard')) return [];
+  const suffix = path === '/' ? '/' : path;
+  return [
+    { hreflang: 'en-CA', href: absoluteUrl(`/en${suffix}`) },
+    { hreflang: 'fr-CA', href: absoluteUrl(`/fr${suffix}`) },
+    { hreflang: 'x-default', href: absoluteUrl(`/en${suffix}`) },
+  ];
+}
+
+export function setHreflangAlternates(alts: { hreflang: string; href: string }[]) {
+  document.head
+    .querySelectorAll('link[rel="alternate"][hreflang]')
+    .forEach((el) => el.remove());
+  alts.forEach(({ hreflang, href }) => {
+    const el = document.createElement('link');
+    el.setAttribute('rel', 'alternate');
+    el.setAttribute('hreflang', hreflang);
+    el.setAttribute('href', href);
+    document.head.appendChild(el);
+  });
+}
+
+export type SeoOverride = Partial<SeoEntry> | null;
+
+let currentOverride: SeoOverride = null;
+const listeners = new Set<() => void>();
+
+export function setPageSeo(override: SeoOverride): void {
+  currentOverride = override;
+  listeners.forEach((l) => l());
+}
+
+export function clearPageSeo(): void {
+  setPageSeo(null);
+}
+
+export function getPageSeoOverride(): SeoOverride {
+  return currentOverride;
+}
+
+export function subscribeSeo(cb: () => void): () => void {
+  listeners.add(cb);
+  return () => {
+    listeners.delete(cb);
+  };
+}
+
+export function mergeSeo(base: SeoEntry, override: SeoOverride): SeoEntry {
+  if (!override) return base;
+  return {
+    ...base,
+    ...('title' in override && override.title ? { title: override.title } : {}),
+    ...('description' in override && override.description
+      ? { description: override.description }
+      : {}),
+    ...('robots' in override && override.robots ? { robots: override.robots } : {}),
+    ...('image' in override && override.image ? { image: override.image } : {}),
+    ...('jsonLd' in override && override.jsonLd ? { jsonLd: override.jsonLd } : {}),
+  };
 }
