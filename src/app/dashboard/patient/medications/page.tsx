@@ -31,6 +31,7 @@ export default function MedicationsPage() {
   const [stats, setStats] = useState<AdherenceStats | null>(null);
   const [medicationsNeedingRefill, setMedicationsNeedingRefill] = useState<PatientMedication[]>([]);
   const [patientId, setPatientId] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (user) {
@@ -114,6 +115,7 @@ export default function MedicationsPage() {
           <CardContent className="p-6">
             <TabsContent value="list" className="mt-0">
               <MedicationList
+                key={refreshKey}
                 patientId={patientId || user.id}
                 onAddMedication={() => setShowAddModal(true)}
                 onEditMedication={(med) => {
@@ -141,7 +143,7 @@ export default function MedicationsPage() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <AddMedicationModalContent
             medication={selectedMedication}
-            patientId={user.id}
+            patientId={patientId || user.id}
             onClose={() => {
               setShowAddModal(false);
               setSelectedMedication(null);
@@ -149,7 +151,7 @@ export default function MedicationsPage() {
             onSave={() => {
               setShowAddModal(false);
               setSelectedMedication(null);
-              window.location.reload();
+              setRefreshKey(k => k + 1);
             }}
           />
         </DialogContent>
@@ -234,15 +236,23 @@ const AddMedicationModalContent: React.FC<{
     setSubmitError(null);
 
     try {
+      const payload = {
+        medication_name: formData.medication_name,
+        dosage: formData.dosage,
+        frequency: formData.frequency,
+        notes: [
+          formData.indication && `Indication: ${formData.indication}`,
+          formData.food_instructions,
+          formData.special_instructions,
+        ].filter(Boolean).join('. ') || undefined,
+      };
       if (medication) {
-        await medicationManagementService.updateMedication(medication.id, formData);
+        await medicationManagementService.updateMedication(medication.id, payload);
       } else {
         await medicationManagementService.addMedication({
-          ...formData,
+          ...payload,
           patient_id: patientId,
           is_active: true,
-          source: 'manual',
-          refills_remaining: 0,
           start_date: new Date().toISOString().split('T')[0],
         });
       }
