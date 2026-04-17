@@ -1,14 +1,30 @@
 import { useState, useEffect } from 'react';
-import { Bell, Check, X, Calendar, Mail, AlertCircle, Package } from 'lucide-react';
+import { Bell, Calendar, Mail, AlertCircle, Package } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { notificationService, Notification } from '../../services/notificationService';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { isValidInternalUrl } from '../../lib/security';
+
+const NOTIFICATIONS_ROUTE_BY_ROLE: Record<string, string> = {
+  provider: '/dashboard/provider/notifications-preferences',
+  admin: '/dashboard/admin/notifications',
+  clinic: '/dashboard/clinic/notifications',
+  pharmacy: '/dashboard/pharmacy/notifications',
+  patient: '/dashboard/notifications',
+};
 
 export default function NotificationBell() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
+
+  const notificationsPath = (): string => {
+    const base = NOTIFICATIONS_ROUTE_BY_ROLE[user?.role || ''] || '/dashboard/notifications';
+    const lang = i18n.language || 'en';
+    return `/${lang}${base}`;
+  };
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -100,7 +116,10 @@ export default function NotificationBell() {
 
     if (notification.action_url && isValidInternalUrl(notification.action_url)) {
       navigate(notification.action_url);
+      return;
     }
+
+    navigate(notificationsPath());
   };
 
   const getCategoryIcon = (category: string) => {
@@ -239,7 +258,7 @@ export default function NotificationBell() {
                 <button
                   onClick={() => {
                     setShowDropdown(false);
-                    navigate('/dashboard/notifications');
+                    navigate(notificationsPath());
                   }}
                   className="w-full text-center text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 font-medium"
                 >
