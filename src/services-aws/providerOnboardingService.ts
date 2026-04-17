@@ -92,10 +92,8 @@ export const providerOnboardingService = {
   },
 
   async updateApplication(applicationId: string, data: Partial<ProviderOnboardingApplication>): Promise<ProviderOnboardingApplication> {
-    const { data: application, error } = await api.put<ProviderOnboardingApplication>(`/provider-onboarding-applications/${applicationId}`, {
-      ...data,
-      updated_at: new Date().toISOString()
-    });
+    const { updated_at: _drop, ...rest } = data as any;
+    const { data: application, error } = await api.put<ProviderOnboardingApplication>(`/provider-onboarding-applications/${applicationId}`, rest);
 
     if (error) throw error;
     return application!;
@@ -105,7 +103,6 @@ export const providerOnboardingService = {
     const { data: application, error } = await api.put<ProviderOnboardingApplication>(`/provider-onboarding-applications/${applicationId}`, {
       application_status: 'submitted',
       submission_date: new Date().toISOString(),
-      updated_at: new Date().toISOString()
     });
 
     if (error) throw error;
@@ -134,7 +131,7 @@ export const providerOnboardingService = {
 
   async getApplicationByUserId(userId: string): Promise<ProviderOnboardingApplication | null> {
     const { data, error } = await api.get<ProviderOnboardingApplication[]>('/provider-onboarding-applications', {
-      params: { user_id: userId, order_by: 'created_at:desc', limit: 1 },
+      params: { user_id: userId, order: 'created_at:desc', limit: 1 },
     });
 
     if (error) throw error;
@@ -143,7 +140,7 @@ export const providerOnboardingService = {
 
   async getPendingApplications(): Promise<ProviderOnboardingApplication[]> {
     const { data, error } = await api.get<ProviderOnboardingApplication[]>('/provider-onboarding-applications', {
-      params: { application_status: 'submitted,under_review', order_by: 'submission_date:asc' },
+      params: { application_status: 'submitted,under_review', order: 'submission_date:asc' },
     });
 
     if (error) throw error;
@@ -190,7 +187,6 @@ export const providerOnboardingService = {
       verified_by: reviewerId,
       verified_at: new Date().toISOString(),
       rejection_reason: status === 'rejected' ? notes : null,
-      updated_at: new Date().toISOString()
     });
 
     if (error) throw error;
@@ -241,7 +237,6 @@ export const providerOnboardingService = {
       reviewed_by: reviewerId,
       reviewed_at: new Date().toISOString(),
       admin_notes: notes,
-      updated_at: new Date().toISOString()
     });
 
     if (error) throw error;
@@ -341,7 +336,6 @@ export const providerOnboardingService = {
       application_status: 'approved',
       reviewed_by: reviewerId,
       review_completed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
     });
 
     await api.post('/provider-verification-history', {
@@ -377,7 +371,6 @@ export const providerOnboardingService = {
       reviewed_by: reviewerId,
       review_completed_at: new Date().toISOString(),
       rejection_reason: reason,
-      updated_at: new Date().toISOString()
     });
 
     if (application) {
@@ -418,7 +411,6 @@ export const providerOnboardingService = {
       reviewed_by: reviewerId,
       resubmission_notes: notes,
       resubmission_date: new Date().toISOString(),
-      updated_at: new Date().toISOString()
     });
 
     await api.post('/provider-verification-history', {
@@ -432,7 +424,7 @@ export const providerOnboardingService = {
 
   async getVerificationHistory(applicationId: string): Promise<any[]> {
     const { data, error } = await api.get<any[]>('/provider-verification-history', {
-      params: { application_id: applicationId, order_by: 'created_at:desc' },
+      params: { application_id: applicationId, order: 'created_at:desc' },
     });
 
     if (error) throw error;
@@ -440,7 +432,7 @@ export const providerOnboardingService = {
   },
 
   async getAllApplications(statusFilter?: string): Promise<ProviderOnboardingApplication[]> {
-    const params: Record<string, any> = { order_by: 'created_at:desc' };
+    const params: Record<string, any> = { order: 'created_at:desc' };
 
     if (statusFilter && statusFilter !== 'all') {
       if (statusFilter === 'pending') {
