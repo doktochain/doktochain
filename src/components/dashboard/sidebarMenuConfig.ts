@@ -97,10 +97,11 @@ export const providerMenu: MenuItem[] = [
     submenu: [
       { label: 'provider.clinicalDocumentation', href: '/dashboard/provider/clinical-documentation' },
       { label: 'provider.clinicalNotes', href: '/dashboard/provider/clinical-notes' },
-      { label: 'provider.patientCharts', href: '/dashboard/provider/patients' },
+      { label: 'provider.patientHealthRecords', href: '/dashboard/provider/patients' },
       { label: 'provider.templates', href: '/dashboard/provider/templates' },
     ],
   },
+  { label: 'provider.patientHealthRecords', icon: FileText, href: '/dashboard/provider/patients' },
   {
     label: 'provider.prescriptions',
     icon: ClipboardList,
