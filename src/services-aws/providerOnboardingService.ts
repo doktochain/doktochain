@@ -339,9 +339,9 @@ export const providerOnboardingService = {
     try {
       await api.post('/notifications', {
         user_id: application.user_id,
+        notification_type: 'system',
         title: 'Application Approved',
         message: 'Your provider application has been approved! You can now access all provider features.',
-        type: 'application_update',
         category: 'system',
         priority: 'high',
         is_read: false,
@@ -426,9 +426,9 @@ export const providerOnboardingService = {
       try {
         await api.post('/notifications', {
           user_id: application.user_id,
+          notification_type: 'system',
           title: 'Application Changes Requested',
           message: `Your provider application requires changes: ${notes}`,
-          type: 'application_update',
           category: 'system',
           priority: 'high',
           is_read: false,
