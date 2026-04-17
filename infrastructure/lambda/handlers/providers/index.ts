@@ -367,17 +367,29 @@ router.get('/admin/all', async (event) => {
   const user = requireRole(event, 'admin', 'clinic');
   const limit = parseInt(getQueryParam(event.queryStringParameters, 'limit') || '200', 10);
   const offset = parseInt(getQueryParam(event.queryStringParameters, 'offset') || '0', 10);
+  const userId = getQueryParam(event.queryStringParameters, 'user_id');
 
   const data = await withRLS(user.userId, user.role, user.claims, async (client) => {
+    const params: unknown[] = [];
+    let paramIdx = 1;
+    let where = 'WHERE p.deleted_at IS NULL';
+
+    if (userId) {
+      where += ` AND p.user_id = $${paramIdx}`;
+      params.push(userId);
+      paramIdx++;
+    }
+
+    params.push(limit, offset);
     const result = await client.query(
       `SELECT p.*, up.email, up.phone, up.first_name, up.last_name,
               up.profile_photo_url
        FROM providers p
        JOIN user_profiles up ON p.user_id = up.id
-       WHERE p.deleted_at IS NULL
+       ${where}
        ORDER BY p.created_at DESC
-       LIMIT $1 OFFSET $2`,
-      [limit, offset]
+       LIMIT $${paramIdx} OFFSET $${paramIdx + 1}`,
+      params
     );
     return result.rows.map((row: any) => ({
       ...row,
@@ -389,6 +401,88 @@ router.get('/admin/all', async (event) => {
         profile_photo_url: row.profile_photo_url,
       },
     }));
+  });
+
+  return success(data, origin);
+});
+
+router.post('/admin/create', async (event) => {
+  const origin = getOrigin(event.headers);
+  const user = requireRole(event, 'admin', 'clinic');
+  const body = parseBody<Record<string, unknown>>(event.body);
+
+  if (!body.user_id) return badRequest('user_id is required', origin);
+
+  const data = await withRLS(user.userId, user.role, user.claims, async (client) => {
+    const fields = [
+      'user_id', 'provider_type', 'license_number', 'license_province',
+      'license_expiry', 'professional_title', 'bio', 'years_of_experience',
+      'languages_spoken', 'accepts_new_patients', 'is_verified', 'is_active',
+      'onboarding_status', 'approved_by', 'approved_at', 'specialty',
+    ];
+    const cols: string[] = [];
+    const vals: unknown[] = [];
+    let idx = 1;
+    for (const f of fields) {
+      if (body[f] !== undefined) {
+        cols.push(f);
+        vals.push(body[f]);
+        idx++;
+      }
+    }
+    if (cols.length === 0) return null;
+
+    const result = await client.query(
+      `INSERT INTO providers (${cols.join(', ')})
+       VALUES (${cols.map((_, i) => `$${i + 1}`).join(', ')})
+       RETURNING *`,
+      vals
+    );
+    return result.rows[0];
+  });
+
+  return created(data, origin);
+});
+
+router.put('/admin/:id', async (event, params) => {
+  const origin = getOrigin(event.headers);
+  const user = requireRole(event, 'admin', 'clinic');
+  const body = parseBody<Record<string, unknown>>(event.body);
+  const providerId = params?.id;
+
+  if (!providerId) return badRequest('Provider ID is required', origin);
+
+  const allowedFields = [
+    'provider_type', 'license_number', 'license_province', 'license_expiry',
+    'professional_title', 'bio', 'years_of_experience', 'languages_spoken',
+    'accepts_new_patients', 'is_verified', 'is_active', 'onboarding_status',
+    'approved_by', 'approved_at', 'specialty', 'verification_date',
+    'telemedicine_enabled', 'npi_number',
+  ];
+
+  const updates: string[] = [];
+  const values: unknown[] = [];
+  let paramIndex = 1;
+
+  for (const field of allowedFields) {
+    if (body[field] !== undefined) {
+      updates.push(`${field} = $${paramIndex}`);
+      values.push(body[field]);
+      paramIndex++;
+    }
+  }
+
+  if (updates.length === 0) return badRequest('No valid fields to update', origin);
+  values.push(providerId);
+
+  const data = await withRLS(user.userId, user.role, user.claims, async (client) => {
+    const result = await client.query(
+      `UPDATE providers SET ${updates.join(', ')}, updated_at = now()
+       WHERE id = $${paramIndex}
+       RETURNING *`,
+      values
+    );
+    return result.rows[0];
   });
 
   return success(data, origin);
