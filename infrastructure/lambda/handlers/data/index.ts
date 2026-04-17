@@ -21,6 +21,7 @@ const TABLE_ALLOWLIST = new Set([
   'provider_reviews', 'provider_locations', 'provider_time_slots',
   'provider_notifications', 'provider_notification_preferences',
   'provider_verification_history', 'provider_onboarding_applications',
+  'provider_verification_documents', 'provider_admin_approvals',
   'provider_favorite_codes', 'provider_digital_signatures',
   'provider_clinic_affiliations', 'clinic_provider_invitations',
   'appointments', 'appointment_notes', 'appointment_questionnaire_responses',
