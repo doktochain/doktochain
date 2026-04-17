@@ -1,15 +1,21 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Appointment } from '../../services/appointmentService';
-import { X, AlertCircle, Clock, DollarSign } from 'lucide-react';
+import { X, AlertCircle, Clock, DollarSign, FileText } from 'lucide-react';
 
 interface ConfirmModalProps {
   appointment: Appointment;
   onConfirm: (appointmentId: string) => Promise<void>;
   onClose: () => void;
+  onCancel?: () => void;
+  onReschedule?: () => void;
 }
 
-export function ConfirmAppointmentModal({ appointment, onConfirm, onClose }: ConfirmModalProps) {
+export function ConfirmAppointmentModal({ appointment, onConfirm, onClose, onCancel, onReschedule }: ConfirmModalProps) {
+  const navigate = useNavigate();
+  const { i18n } = useTranslation();
   const [loading, setLoading] = useState(false);
 
   const handleConfirm = async () => {
@@ -61,19 +67,52 @@ export function ConfirmAppointmentModal({ appointment, onConfirm, onClose }: Con
           </div>
         </div>
 
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          >
-            Cancel
-          </button>
+        <div className="flex flex-col gap-2">
           <button
             onClick={handleConfirm}
-            disabled={loading}
-            className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
+            disabled={loading || appointment.status === 'confirmed'}
+            className="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
           >
-            {loading ? 'Confirming...' : 'Confirm Appointment'}
+            {loading ? 'Confirming...' : appointment.status === 'confirmed' ? 'Already Confirmed' : 'Confirm Appointment'}
+          </button>
+          {appointment.patient_id && (
+            <button
+              onClick={() => {
+                const lang = i18n.language || 'en';
+                navigate(`/${lang}/dashboard/provider/patients?patientId=${appointment.patient_id}`);
+                onClose();
+              }}
+              className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              View Patient Health Records
+            </button>
+          )}
+          <div className="flex gap-2">
+            {onReschedule && (
+              <button
+                onClick={onReschedule}
+                disabled={appointment.status === 'cancelled' || appointment.status === 'completed'}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+              >
+                Reschedule
+              </button>
+            )}
+            {onCancel && (
+              <button
+                onClick={onCancel}
+                disabled={appointment.status === 'cancelled' || appointment.status === 'completed'}
+                className="flex-1 px-4 py-2 border border-red-300 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50"
+              >
+                Cancel Appointment
+              </button>
+            )}
+          </div>
+          <button
+            onClick={onClose}
+            className="w-full px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+          >
+            Close
           </button>
         </div>
       </div>
