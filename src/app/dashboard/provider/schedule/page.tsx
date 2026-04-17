@@ -32,6 +32,7 @@ export default function ProviderScheduleManagement() {
     start_time: '09:00',
     end_time: '17:00',
     slot_duration_minutes: 30,
+    appointment_type: 'both' as 'in-person' | 'virtual' | 'both',
   });
   const [bufferMinutes, setBufferMinutes] = useState(0);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
@@ -43,7 +44,7 @@ export default function ProviderScheduleManagement() {
     slot_duration_minutes: 30,
     reason: '',
   });
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; type: 'schedule' | 'override' } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; type: 'schedule' | 'override' | 'location' } | null>(null);
 
   useEffect(() => {
     loadData();
@@ -118,8 +119,9 @@ export default function ProviderScheduleManagement() {
         start_time: newSchedule.start_time,
         end_time: newSchedule.end_time,
         slot_duration_minutes: newSchedule.slot_duration_minutes,
+        appointment_type: newSchedule.appointment_type,
         is_available: true,
-      });
+      } as any);
 
       toast.success('Time slot added');
       setShowAddModal(false);
@@ -128,6 +130,7 @@ export default function ProviderScheduleManagement() {
         start_time: '09:00',
         end_time: '17:00',
         slot_duration_minutes: 30,
+        appointment_type: 'both',
       });
 
       loadData();
@@ -191,6 +194,11 @@ export default function ProviderScheduleManagement() {
       if (deleteTarget.type === 'override') {
         const { error } = await api.delete(`/provider-unavailability/${deleteTarget.id}`);
         if (error) throw error;
+      } else if (deleteTarget.type === 'location') {
+        await providerService.deleteLocation(deleteTarget.id);
+        if (selectedLocation === deleteTarget.id) {
+          setSelectedLocation('');
+        }
       } else {
         await providerService.deleteSchedule(deleteTarget.id);
       }
@@ -204,8 +212,13 @@ export default function ProviderScheduleManagement() {
 
   const getSchedulesForDay = (dayOfWeek: number) => {
     return schedules
-      .filter((s) => s.day_of_week === dayOfWeek)
+      .filter((s) => s.day_of_week === dayOfWeek && (!selectedLocation || s.location_id === selectedLocation))
       .sort((a, b) => a.start_time.localeCompare(b.start_time));
+  };
+
+  const getLocationName = (locationId: string) => {
+    const loc = locations.find(l => l.id === locationId);
+    return loc?.location_name || '';
   };
 
   const formatTime = (time: string) => {
@@ -264,15 +277,26 @@ export default function ProviderScheduleManagement() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {locations.map((location) => (
-                  <button
+                  <div
                     key={location.id}
                     onClick={() => setSelectedLocation(location.id)}
-                    className={`p-4 border-2 rounded-xl text-left transition ${
+                    className={`p-4 border-2 rounded-xl text-left transition cursor-pointer relative group ${
                       selectedLocation === location.id
                         ? 'border-sky-600 bg-sky-50'
                         : 'border hover:border-input'
                     }`}
                   >
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteTarget({ id: location.id, type: 'location' });
+                      }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
                     <div className="flex items-start gap-3">
                       <MapPin className={`w-5 h-5 mt-0.5 flex-shrink-0 ${selectedLocation === location.id ? 'text-sky-600' : 'text-muted-foreground'}`} />
                       <div>
@@ -280,14 +304,20 @@ export default function ProviderScheduleManagement() {
                         <p className="text-sm text-muted-foreground mt-0.5">
                           {location.city}, {location.province}
                         </p>
-                        {location.is_primary && (
-                          <Badge variant="info" className="mt-2">
-                            Primary
-                          </Badge>
-                        )}
+                        <div className="flex gap-1.5 mt-2 flex-wrap">
+                          {location.is_primary && (
+                            <Badge variant="info">Primary</Badge>
+                          )}
+                          {location.accepts_in_person && (
+                            <Badge variant="secondary" className="text-xs">In-Person</Badge>
+                          )}
+                          {location.accepts_virtual && (
+                            <Badge variant="secondary" className="text-xs">Virtual</Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             </CardContent>
@@ -376,9 +406,22 @@ export default function ProviderScheduleManagement() {
                                       <p className="font-medium text-foreground text-sm">
                                         {formatTime(schedule.start_time)} - {formatTime(schedule.end_time)}
                                       </p>
-                                      <p className="text-xs text-muted-foreground">
-                                        {schedule.slot_duration_minutes} min slots
-                                      </p>
+                                      <div className="flex items-center gap-2 mt-0.5">
+                                        <span className="text-xs text-muted-foreground">
+                                          {schedule.slot_duration_minutes} min slots
+                                        </span>
+                                        {(schedule as any).appointment_type && (schedule as any).appointment_type !== 'both' && (
+                                          <Badge variant="outline" className="text-xs px-1.5 py-0">
+                                            {(schedule as any).appointment_type === 'virtual' ? 'Virtual' : 'In-Person'}
+                                          </Badge>
+                                        )}
+                                        {(schedule as any).appointment_type === 'both' && (
+                                          <Badge variant="outline" className="text-xs px-1.5 py-0">All Types</Badge>
+                                        )}
+                                        {!selectedLocation && schedule.location_id && (
+                                          <span className="text-xs text-sky-600">{getLocationName(schedule.location_id)}</span>
+                                        )}
+                                      </div>
                                     </div>
                                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                       <Button
@@ -572,6 +615,31 @@ export default function ProviderScheduleManagement() {
               </div>
             </div>
 
+            <div>
+              <Label className="mb-2 block">Appointment Type</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { value: 'both', label: 'Both' },
+                  { value: 'in-person', label: 'In-Person' },
+                  { value: 'virtual', label: 'Virtual' },
+                ] as const).map((opt) => (
+                  <Button
+                    key={opt.value}
+                    type="button"
+                    variant="outline"
+                    onClick={() => setNewSchedule({ ...newSchedule, appointment_type: opt.value })}
+                    className={`px-3 py-2 border-2 text-sm font-medium transition ${
+                      newSchedule.appointment_type === opt.value
+                        ? 'border-sky-600 bg-sky-50 text-sky-700'
+                        : 'border text-muted-foreground hover:border-input'
+                    }`}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
             <div className="flex gap-3 pt-2">
               <Button
                 onClick={handleAddSchedule}
@@ -593,8 +661,10 @@ export default function ProviderScheduleManagement() {
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title={deleteTarget?.type === 'override' ? 'Remove Date Override' : 'Remove Time Slot'}
-        description={deleteTarget?.type === 'override'
+        title={deleteTarget?.type === 'location' ? 'Remove Location' : deleteTarget?.type === 'override' ? 'Remove Date Override' : 'Remove Time Slot'}
+        description={deleteTarget?.type === 'location'
+          ? 'Are you sure you want to remove this location? All time slots associated with it will also be removed. This action cannot be undone.'
+          : deleteTarget?.type === 'override'
           ? 'Are you sure you want to remove this date override? This action cannot be undone.'
           : 'Are you sure you want to remove this time slot? This action cannot be undone.'}
         confirmLabel="Remove"
