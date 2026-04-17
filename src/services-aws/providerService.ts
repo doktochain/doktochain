@@ -117,7 +117,7 @@ export const providerService = {
 
   async getLocations(providerId: string): Promise<ProviderLocation[]> {
     const { data, error } = await api.get<ProviderLocation[]>('/provider-locations', {
-      params: { provider_id: providerId, order_by: 'is_primary:desc' },
+      params: { provider_id: providerId, order: 'is_primary:desc' },
     });
 
     if (error) throw error;
@@ -148,7 +148,7 @@ export const providerService = {
     const params: Record<string, any> = {
       provider_id: providerId,
       is_available: true,
-      order_by: 'day_of_week:asc',
+      order: 'day_of_week:asc',
     };
 
     if (locationId) {
@@ -224,7 +224,7 @@ export const providerService = {
       params: {
         provider_id: providerId,
         is_published: true,
-        order_by: 'created_at:desc',
+        order: 'created_at:desc',
       },
     });
 
