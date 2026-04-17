@@ -68,6 +68,7 @@ new MonitoringStack(app, `${prefix}-monitoring`, {
   config,
   apiGateway: apiStack.restApi,
   lambdaFunctions: apiStack.lambdaFunctions,
+  lambdaNames: apiStack.lambdaNames,
   auroraClusterIdentifier: databaseStack.clusterIdentifier,
 });
 
