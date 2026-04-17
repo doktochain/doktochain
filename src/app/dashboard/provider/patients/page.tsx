@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Users, Search, FileText, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { api } from '../../../../lib/api-client';
@@ -29,10 +30,13 @@ interface PatientData {
 
 export default function PatientChartsPage() {
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [patients, setPatients] = useState<PatientData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(
+    searchParams.get('patientId')
+  );
   const [consentMap, setConsentMap] = useState<Record<string, { status: string; end_date: string | null }>>({});
 
   useEffect(() => {
@@ -40,6 +44,25 @@ export default function PatientChartsPage() {
       loadPatients();
     }
   }, [user]);
+
+  useEffect(() => {
+    const qp = searchParams.get('patientId');
+    if (qp && qp !== selectedPatientId) setSelectedPatientId(qp);
+  }, [searchParams]);
+
+  const openPatient = (id: string) => {
+    setSelectedPatientId(id);
+    const next = new URLSearchParams(searchParams);
+    next.set('patientId', id);
+    setSearchParams(next, { replace: true });
+  };
+
+  const closePatient = () => {
+    setSelectedPatientId(null);
+    const next = new URLSearchParams(searchParams);
+    next.delete('patientId');
+    setSearchParams(next, { replace: true });
+  };
 
   const loadPatients = async () => {
     if (!user) return;
@@ -189,7 +212,7 @@ export default function PatientChartsPage() {
       <div className="p-6 space-y-4">
         <Button
           variant="ghost"
-          onClick={() => setSelectedPatientId(null)}
+          onClick={closePatient}
           className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -202,7 +225,7 @@ export default function PatientChartsPage() {
         </Button>
         <PatientChartViewer
           patientId={selectedPatientId}
-          onClose={() => setSelectedPatientId(null)}
+          onClose={closePatient}
         />
       </div>
     );
@@ -220,9 +243,9 @@ export default function PatientChartsPage() {
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Patient Charts</h1>
+          <h1 className="text-3xl font-bold text-foreground">Patient Health Records</h1>
           <p className="text-muted-foreground">
-            Browse and manage patient medical charts ({patients.length} patients)
+            View consented patient EHR data across all treating providers ({patients.length} patients)
           </p>
         </div>
       </div>
@@ -347,11 +370,11 @@ export default function PatientChartsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setSelectedPatientId(patient.id)}
+                          onClick={() => openPatient(patient.id)}
                           className="text-primary hover:text-primary/80 flex items-center gap-1"
                         >
                           <FileText className="w-4 h-4" />
-                          View Chart
+                          View Health Records
                         </Button>
                       </td>
                     </tr>
