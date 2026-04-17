@@ -6,14 +6,20 @@ import VitalSignsForm from '../../../../components/ehr/VitalSignsForm';
 import AuditTrailViewer from '../../../../components/ehr/AuditTrailViewer';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { ehrService } from '../../../../services/ehrService';
-import { supabase } from '../../../../lib/supabase';
+import { providerService } from '../../../../services/providerService';
+import { api } from '../../../../lib/api-client';
 
 type ViewMode = 'soap-note' | 'vitals' | 'audit';
 
 interface PatientResult {
   id: string;
   user_id: string;
-  user_profiles: { first_name: string; last_name: string } | null;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  date_of_birth?: string;
+  health_card_number?: string;
+  user_profiles?: { first_name: string; last_name: string } | null;
 }
 
 export default function ClinicalDocumentationPage() {
@@ -44,7 +50,9 @@ export default function ClinicalDocumentationPage() {
   const loadStats = async () => {
     if (!user) return;
     try {
-      const notes = await ehrService.getSOAPNotesByProvider(user.id);
+      const provider = await providerService.getProviderByUserId(user.id);
+      if (!provider) return;
+      const notes = await ehrService.getSOAPNotesByProvider(provider.id);
       const today = new Date().toISOString().split('T')[0];
       const notesToday = notes.filter((n) => (n as any).created_at?.startsWith(today)).length;
       setStats({ notesToday, totalNotes: notes.length });
@@ -54,24 +62,20 @@ export default function ClinicalDocumentationPage() {
   const handlePatientSearch = async () => {
     if (patientSearch.length < 2) return;
     try {
-      const { data } = await supabase
-        .from('patients')
-        .select('id, user_id, user_profiles(first_name, last_name)')
-        .limit(10);
-
-      if (data) {
-        const filtered = (data as unknown as PatientResult[]).filter((p) => {
-          const name = `${p.user_profiles?.first_name || ''} ${p.user_profiles?.last_name || ''}`.toLowerCase();
-          return name.includes(patientSearch.toLowerCase());
-        });
-        setSearchResults(filtered);
-      }
-    } catch {}
+      const { data } = await api.get<any[]>('/patients', {
+        params: { search: patientSearch, limit: 10 },
+      });
+      setSearchResults(((data as any[]) || []) as PatientResult[]);
+    } catch (err) {
+      console.warn('Patient search failed', err);
+    }
   };
 
   const selectPatient = (patient: PatientResult) => {
     setSelectedPatientId(patient.id);
-    setSelectedPatientName(`${patient.user_profiles?.first_name || ''} ${patient.user_profiles?.last_name || ''}`);
+    const first = patient.first_name || patient.user_profiles?.first_name || '';
+    const last = patient.last_name || patient.user_profiles?.last_name || '';
+    setSelectedPatientName(`${first} ${last}`.trim() || patient.email || 'Patient');
     setSearchResults([]);
     setPatientSearch('');
   };
@@ -130,17 +134,24 @@ export default function ClinicalDocumentationPage() {
             />
             {searchResults.length > 0 && (
               <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                {searchResults.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => selectPatient(p)}
-                    className="w-full text-left px-4 py-3 hover:bg-sky-50 border-b border-gray-100 last:border-0"
-                  >
-                    <p className="font-medium text-gray-900">
-                      {p.user_profiles?.first_name} {p.user_profiles?.last_name}
-                    </p>
-                  </button>
-                ))}
+                {searchResults.map((p) => {
+                  const first = p.first_name || p.user_profiles?.first_name || '';
+                  const last = p.last_name || p.user_profiles?.last_name || '';
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => selectPatient(p)}
+                      className="w-full text-left px-4 py-3 hover:bg-sky-50 border-b border-gray-100 last:border-0"
+                    >
+                      <p className="font-medium text-gray-900">{first} {last}</p>
+                      {(p.email || p.date_of_birth || p.health_card_number) && (
+                        <p className="text-xs text-gray-500">
+                          {[p.email, p.health_card_number, p.date_of_birth].filter(Boolean).join(' • ')}
+                        </p>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
