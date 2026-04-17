@@ -15,6 +15,7 @@ interface MonitoringStackProps extends cdk.StackProps {
   config: EnvironmentConfig;
   apiGateway: apigateway.RestApi;
   lambdaFunctions: lambda.Function[];
+  lambdaNames: string[];
   auroraClusterIdentifier: string;
 }
 
@@ -22,7 +23,7 @@ export class MonitoringStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: MonitoringStackProps) {
     super(scope, id, props);
 
-    const { config, apiGateway, lambdaFunctions, auroraClusterIdentifier } = props;
+    const { config, apiGateway, lambdaFunctions, lambdaNames, auroraClusterIdentifier } = props;
     const prefix = `${config.projectName}-${config.environment}`;
 
     const trailBucket = new s3.Bucket(this, 'CloudTrailBucket', {
@@ -120,8 +121,9 @@ export class MonitoringStack extends cdk.Stack {
     dbCpuAlarm.addAlarmAction(new cloudwatch_actions.SnsAction(alertTopic));
 
     lambdaFunctions.forEach((fn, index) => {
-      const errorAlarm = new cloudwatch.Alarm(this, `LambdaErrorAlarm${index}`, {
-        alarmName: `${prefix}-lambda-errors-${fn.functionName}`,
+      const name = lambdaNames[index];
+      const errorAlarm = new cloudwatch.Alarm(this, `LambdaErrorAlarm-${name}`, {
+        alarmName: `${prefix}-lambda-errors-${prefix}-${name}`,
         metric: fn.metricErrors({
           period: cdk.Duration.minutes(5),
           statistic: 'Sum',
