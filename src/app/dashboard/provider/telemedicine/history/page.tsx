@@ -15,14 +15,34 @@ export default function SessionHistoryPage() {
     loadProviderData();
   }, [user]);
 
+  useEffect(() => {
+    if (provider?.id) {
+      loadSessions(provider.id);
+    }
+  }, [provider]);
+
   const loadProviderData = async () => {
     if (!user) return;
 
     try {
       const providerData = await providerService.getProviderByUserId(user.id);
       setProvider(providerData);
+      if (!providerData) {
+        setLoading(false);
+      }
     } catch (error) {
       console.error('Error loading provider:', error);
+      setLoading(false);
+    }
+  };
+
+  const loadSessions = async (providerId: string) => {
+    setLoading(true);
+    try {
+      const data = await advancedTelemedicineService.getProviderSessions(providerId);
+      setSessions(data);
+    } catch (error) {
+      console.error('Error loading sessions:', error);
     } finally {
       setLoading(false);
     }
