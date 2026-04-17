@@ -30,6 +30,7 @@ export class ApiStack extends cdk.Stack {
   public readonly restApi: apigateway.RestApi;
   public readonly webSocketApi: apigatewayv2.WebSocketApi;
   public readonly lambdaFunctions: lambda.Function[];
+  public readonly lambdaNames: string[];
 
   constructor(scope: Construct, id: string, props: ApiStackProps) {
     super(scope, id, props);
@@ -41,6 +42,7 @@ export class ApiStack extends cdk.Stack {
     const prefix = `${config.projectName}-${config.environment}`;
 
     this.lambdaFunctions = [];
+    this.lambdaNames = [];
 
     const dailyApiKeySecret = secretsmanager.Secret.fromSecretNameV2(
       this, 'DailyApiKey', `${prefix}/daily-api-key`
@@ -102,6 +104,7 @@ export class ApiStack extends cdk.Stack {
 
       databaseSecret.grantRead(fn);
       this.lambdaFunctions.push(fn);
+      this.lambdaNames.push(name);
       return fn;
     };
 
