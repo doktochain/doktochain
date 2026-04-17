@@ -204,13 +204,7 @@ export const prescriptionService = {
       }
     }
 
-    const updates: any = { status };
-
-    if (status === 'filled') {
-      updates.filled_date = new Date().toISOString().split('T')[0];
-    }
-
-    const { data, error } = await api.put<Prescription>(`/prescriptions/${prescriptionId}`, updates);
+    const { data, error } = await api.put<Prescription>(`/prescriptions/${prescriptionId}/status`, { status });
 
     if (error) throw error;
 
@@ -239,10 +233,16 @@ export const prescriptionService = {
 
     const oldPharmacyId = prescription?.pharmacy_id;
 
-    const { data, error } = await api.put<Prescription>(`/prescriptions/${prescriptionId}`, {
-      pharmacy_id: pharmacyId,
-      status: 'sent'
-    });
+    const { error: redirectError } = await api.put<Prescription>(
+      `/prescriptions/${prescriptionId}/redirect`,
+      { pharmacy_id: pharmacyId }
+    );
+    if (redirectError) throw redirectError;
+
+    const { data, error } = await api.put<Prescription>(
+      `/prescriptions/${prescriptionId}/status`,
+      { status: 'sent' }
+    );
 
     if (error) throw error;
 
@@ -310,7 +310,7 @@ export const prescriptionService = {
 
     const oldPharmacyId = prescription.pharmacy_id;
 
-    const { data, error } = await api.put<Prescription>(`/prescriptions/${prescriptionId}`, {
+    const { data, error } = await api.put<Prescription>(`/prescriptions/${prescriptionId}/redirect`, {
       pharmacy_id: newPharmacyId
     });
 
@@ -405,15 +405,15 @@ export const prescriptionService = {
     return data!;
   },
 
-  async getProviderRefillRequests(providerId: string): Promise<any[]> {
-    const { data, error } = await api.get<any[]>('/prescription-refills', {
-      params: { status: 'pending', provider_id: providerId, order: 'request_date.desc' }
+  async getProviderRefillRequests(providerUserId: string): Promise<any[]> {
+    const { data, error } = await api.get<any[]>('/prescription-refill-requests', {
+      params: { status: 'pending', provider_id: providerUserId, order: 'request_date:desc' }
     });
 
     if (error) throw error;
 
     try {
-      await auditLog.dataAccessed('prescription_refill', 'provider_refills', providerId, 'provider', {
+      await auditLog.dataAccessed('prescription_refill_request', 'provider_refills', providerUserId, 'provider', {
         action: 'read', records_count: (data || []).length,
       });
     } catch {}
@@ -422,10 +422,10 @@ export const prescriptionService = {
   },
 
   async approveRefill(refillId: string, approvedBy: string): Promise<any> {
-    const { data, error } = await api.put<any>(`/prescription-refills/${refillId}`, {
+    const { data, error } = await api.put<any>(`/prescription-refill-requests/${refillId}`, {
       status: 'approved',
-      approved_by: approvedBy,
-      approval_date: new Date().toISOString(),
+      reviewed_by: approvedBy,
+      reviewed_at: new Date().toISOString(),
     });
 
     if (error) throw error;
@@ -490,9 +490,11 @@ export const prescriptionService = {
   },
 
   async denyRefill(refillId: string, reason: string, deniedBy?: string): Promise<any> {
-    const { data, error } = await api.put<any>(`/prescription-refills/${refillId}`, {
+    const { data, error } = await api.put<any>(`/prescription-refill-requests/${refillId}`, {
       status: 'denied',
       denial_reason: reason,
+      reviewed_by: deniedBy,
+      reviewed_at: new Date().toISOString(),
     });
 
     if (error) throw error;
