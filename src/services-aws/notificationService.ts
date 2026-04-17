@@ -281,8 +281,11 @@ export const notificationService = {
     error: Error | null;
   }> {
     try {
-      const { error } = await api.post('/notifications/mark-all-read', {
-        user_id: userId,
+      const { error } = await api.put('/notifications', {
+        is_read: true,
+        read_at: new Date().toISOString(),
+      }, {
+        params: { user_id: userId, is_read: 'false' },
       });
 
       if (error) throw error;
