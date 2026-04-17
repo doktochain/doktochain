@@ -7,7 +7,7 @@ import AuditTrailViewer from '../../../../components/ehr/AuditTrailViewer';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { ehrService } from '../../../../services/ehrService';
 import { providerService } from '../../../../services/providerService';
-import { api } from '../../../../lib/api-client';
+import { patientService } from '../../../../services/patientService';
 
 type ViewMode = 'soap-note' | 'vitals' | 'audit';
 
@@ -59,17 +59,22 @@ export default function ClinicalDocumentationPage() {
     } catch {}
   };
 
-  const handlePatientSearch = async () => {
-    if (patientSearch.length < 2) return;
-    try {
-      const { data } = await api.get<any[]>('/patients', {
-        params: { search: patientSearch, limit: 10 },
-      });
-      setSearchResults(((data as any[]) || []) as PatientResult[]);
-    } catch (err) {
-      console.warn('Patient search failed', err);
+  useEffect(() => {
+    const term = patientSearch.trim();
+    if (term.length < 2) {
+      setSearchResults([]);
+      return;
     }
-  };
+    const timer = setTimeout(async () => {
+      try {
+        const data = await patientService.searchPatients(term, 10);
+        setSearchResults(((data as any[]) || []) as PatientResult[]);
+      } catch (err) {
+        console.warn('Patient search failed', err);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [patientSearch]);
 
   const selectPatient = (patient: PatientResult) => {
     setSelectedPatientId(patient.id);
@@ -84,7 +89,7 @@ export default function ClinicalDocumentationPage() {
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Clinical Documentation</h1>
-        <p className="text-gray-600">FHIR-compliant EHR with blockchain audit trail</p>
+        <p className="text-gray-600">FHIR-compliant EHR with cryptographic audit trail</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -112,7 +117,7 @@ export default function ClinicalDocumentationPage() {
             <span className="text-3xl font-bold">100%</span>
           </div>
           <h3 className="text-lg font-semibold mb-1">Data Integrity</h3>
-          <p className="text-green-100 text-sm">Blockchain verified</p>
+          <p className="text-green-100 text-sm">Cryptographically verified</p>
         </div>
       </div>
 
@@ -128,8 +133,7 @@ export default function ClinicalDocumentationPage() {
               type="text"
               value={patientSearch}
               onChange={(e) => setPatientSearch(e.target.value)}
-              onKeyUp={handlePatientSearch}
-              placeholder="Search patients by name..."
+              placeholder="Search patients by name, email, health card, or DOB..."
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500"
             />
             {searchResults.length > 0 && (
@@ -246,7 +250,7 @@ export default function ClinicalDocumentationPage() {
                 <div className="space-y-4">
                   <div className="bg-sky-50 border border-sky-200 rounded-lg p-4">
                     <p className="text-sm text-sky-900">
-                      All clinical actions are recorded with blockchain-level security. Select a resource to view its audit trail.
+                      All clinical actions are recorded with cryptographic-level security. Select a resource to view its audit trail.
                     </p>
                   </div>
                   <AuditTrailViewer
