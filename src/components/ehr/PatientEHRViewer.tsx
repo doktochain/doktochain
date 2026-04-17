@@ -261,9 +261,9 @@ export default function PatientEHRViewer() {
         <div className="flex items-start gap-3">
           <Shield className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-blue-900 dark:text-blue-100">
-            <p className="font-semibold mb-1">Blockchain-Secured Health Records</p>
+            <p className="font-semibold mb-1">Cryptographically-Secured Health Records</p>
             <p>
-              All your health records are FHIR-compliant and secured with blockchain technology.
+              All your health records are FHIR-compliant and secured with cryptographic technology.
               Every access and modification is logged in an immutable audit trail.
             </p>
           </div>
