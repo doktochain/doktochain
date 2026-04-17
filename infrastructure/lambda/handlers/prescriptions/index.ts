@@ -177,6 +177,47 @@ router.put('/:id/status', async (event, params) => {
   return success(data, origin);
 });
 
+router.put('/:id', async (event, params) => {
+  const origin = getOrigin(event.headers);
+  const user = requireRole(event, 'provider', 'admin');
+  const body = parseBody<Record<string, unknown>>(event.body);
+
+  const allowedFields = [
+    'diagnosis', 'notes', 'pharmacy_id', 'appointment_id', 'is_controlled_substance',
+  ];
+
+  const updates: string[] = [];
+  const values: unknown[] = [];
+  let paramIndex = 1;
+
+  for (const field of allowedFields) {
+    if (body[field] !== undefined) {
+      updates.push(`${field} = $${paramIndex}`);
+      values.push(body[field]);
+      paramIndex++;
+    }
+  }
+
+  if (updates.length === 0) {
+    return badRequest('No valid fields to update', origin);
+  }
+
+  values.push(params.id);
+
+  const data = await withRLS(user.userId, user.role, user.claims, async (client) => {
+    const result = await client.query(
+      `UPDATE prescriptions SET ${updates.join(', ')}, updated_at = now()
+       WHERE id = $${paramIndex} AND status = 'pending'
+       RETURNING *`,
+      values
+    );
+    return result.rows[0];
+  });
+
+  if (!data) return badRequest('Prescription not found or no longer editable', origin);
+  return success(data, origin);
+});
+
 router.put('/:id/redirect', async (event, params) => {
   const origin = getOrigin(event.headers);
   const user = requireAuth(event);
