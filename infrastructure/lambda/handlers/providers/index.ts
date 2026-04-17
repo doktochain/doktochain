@@ -1,6 +1,6 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { Router } from '../../shared/router';
-import { requireAuth, extractUser } from '../../shared/auth';
+import { requireAuth, requireRole, extractUser } from '../../shared/auth';
 import { withRLS } from '../../shared/db';
 import {
   success, created, badRequest, notFound,
@@ -360,6 +360,38 @@ publicRouter.get('/insurance-providers', async (event) => {
     return r.rows;
   });
   return success(result, origin);
+});
+
+router.get('/admin/all', async (event) => {
+  const origin = getOrigin(event.headers);
+  const user = requireRole(event, 'admin', 'clinic');
+  const limit = parseInt(getQueryParam(event.queryStringParameters, 'limit') || '200', 10);
+  const offset = parseInt(getQueryParam(event.queryStringParameters, 'offset') || '0', 10);
+
+  const data = await withRLS(user.userId, user.role, user.claims, async (client) => {
+    const result = await client.query(
+      `SELECT p.*, up.email, up.phone, up.first_name, up.last_name,
+              up.profile_photo_url
+       FROM providers p
+       JOIN user_profiles up ON p.user_id = up.id
+       WHERE p.deleted_at IS NULL
+       ORDER BY p.created_at DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+    return result.rows.map((row: any) => ({
+      ...row,
+      user_profiles: {
+        email: row.email,
+        phone: row.phone,
+        first_name: row.first_name,
+        last_name: row.last_name,
+        profile_photo_url: row.profile_photo_url,
+      },
+    }));
+  });
+
+  return success(data, origin);
 });
 
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
