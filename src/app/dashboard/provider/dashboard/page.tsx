@@ -29,6 +29,7 @@ interface UpcomingAppointment {
   appointment_date: string;
   start_time: string;
   department?: string;
+  status?: string;
 }
 
 interface StatCardData {
@@ -46,6 +47,29 @@ interface TopPatient {
   appointmentCount: number;
 }
 
+interface AppointmentStatusSlice {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface RecentAppointmentRow {
+  id: string;
+  patient_name: string;
+  phone: string;
+  appointment_date: string;
+  start_time: string;
+  appointment_type: string;
+  status: string;
+  consultation_fee_cents?: number;
+}
+
+interface SummaryCardData {
+  current: number;
+  change: number;
+  trend: { v: number }[];
+}
+
 export default function ProviderDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -60,10 +84,18 @@ export default function ProviderDashboard() {
   const [upcomingAppointments, setUpcomingAppointments] = useState<UpcomingAppointment[]>([]);
   const [statCards, setStatCards] = useState<StatCardData[]>([]);
   const [topPatients, setTopPatients] = useState<TopPatient[]>([]);
+  const [upcomingFilter, setUpcomingFilter] = useState<'today' | 'this-week' | 'this-month'>('today');
   const [availabilityFilter, setAvailabilityFilter] = useState('all');
   const [appointmentStatsFilter, setAppointmentStatsFilter] = useState<TimePeriod>('monthly');
   const [topPatientsFilter, setTopPatientsFilter] = useState<TimePeriod>('weekly');
   const [earningsTrendDays, setEarningsTrendDays] = useState<7 | 30 | 90>(30);
+  const [providerLocations, setProviderLocations] = useState<any[]>([]);
+  const [availabilitySchedule, setAvailabilitySchedule] = useState<any[]>([]);
+  const [appointmentStatusPie, setAppointmentStatusPie] = useState<AppointmentStatusSlice[]>([]);
+  const [recentAppointments, setRecentAppointments] = useState<RecentAppointmentRow[]>([]);
+  const [totalAppointmentsCard, setTotalAppointmentsCard] = useState<SummaryCardData>({ current: 0, change: 0, trend: [] });
+  const [onlineConsultationsCard, setOnlineConsultationsCard] = useState<SummaryCardData>({ current: 0, change: 0, trend: [] });
+  const [cancelledCard, setCancelledCard] = useState<SummaryCardData>({ current: 0, change: 0, trend: [] });
   const [onboardingApplication, setOnboardingApplication] = useState<any>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +103,18 @@ export default function ProviderDashboard() {
   useEffect(() => {
     loadData();
   }, [user, timePeriod]);
+
+  useEffect(() => {
+    if (provider) {
+      loadUpcomingAppointments(provider.id);
+    }
+  }, [upcomingFilter]);
+
+  useEffect(() => {
+    if (provider) {
+      loadAppointmentStatusPie(provider.id);
+    }
+  }, [appointmentStatsFilter]);
 
   const loadData = async () => {
     if (!user) return;
@@ -119,6 +163,10 @@ export default function ProviderDashboard() {
         loadUpcomingAppointments(providerData.id),
         loadStatCards(providerData.id),
         loadTopPatients(providerData.id),
+        loadAvailability(providerData.id),
+        loadAppointmentStatusPie(providerData.id),
+        loadRecentAppointments(providerData.id),
+        loadSummaryCards(providerData.id),
       ]);
     } catch (err) {
       console.error('Error loading dashboard:', err);
@@ -130,16 +178,36 @@ export default function ProviderDashboard() {
 
   const loadUpcomingAppointments = async (providerId: string) => {
     try {
-      const { data } = await api.get<any[]>('/appointments', {
-        params: {
-          provider_id: providerId,
-          appointment_date_gte: new Date().toISOString().split('T')[0],
-          order: 'appointment_date:asc',
-          limit: 5,
-        },
-      });
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStr = today.toISOString().split('T')[0];
+
+      let endDateStr: string | undefined;
+      if (upcomingFilter === 'today') {
+        endDateStr = todayStr;
+      } else if (upcomingFilter === 'this-week') {
+        const end = new Date(today);
+        end.setDate(end.getDate() + (6 - end.getDay()));
+        endDateStr = end.toISOString().split('T')[0];
+      } else {
+        const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        endDateStr = end.toISOString().split('T')[0];
+      }
+
+      const params: Record<string, any> = {
+        provider_id: providerId,
+        appointment_date_gte: todayStr,
+        appointment_date_lte: endDateStr,
+        order: 'appointment_date:asc',
+        limit: 10,
+      };
+
+      const { data } = await api.get<any[]>('/appointments', { params });
       if (data) {
-        setUpcomingAppointments(data.map((apt: any) => ({
+        const active = data.filter((apt: any) =>
+          !['completed', 'cancelled', 'no-show'].includes(apt.status)
+        );
+        setUpcomingAppointments(active.map((apt: any) => ({
           id: apt.id,
           patient_name: apt.patient_name || `${apt.first_name || ''} ${apt.last_name || ''}`.trim() || 'Patient',
           patient_id: apt.patient_id,
@@ -147,6 +215,7 @@ export default function ProviderDashboard() {
           appointment_date: apt.appointment_date,
           start_time: apt.start_time,
           department: apt.department,
+          status: apt.status,
         })));
       }
     } catch (err) {
@@ -154,33 +223,204 @@ export default function ProviderDashboard() {
     }
   };
 
+  const pctChange = (current: number, prev: number): number => {
+    if (!prev) return current > 0 ? 100 : 0;
+    return Math.round(((current - prev) / prev) * 100);
+  };
+
   const loadStatCards = async (providerId: string) => {
     const days = timePeriod === 'weekly' ? 7 : timePeriod === 'monthly' ? 30 : 365;
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
+    const now = new Date();
+    const startCurrent = new Date();
+    startCurrent.setDate(now.getDate() - days);
+    const startPrev = new Date();
+    startPrev.setDate(now.getDate() - days * 2);
 
-    const { data: appointments } = await api.get<any[]>('/appointments', {
-      params: {
-        provider_id: providerId,
-        appointment_date_gte: startDate.toISOString().split('T')[0],
-      },
+    const [currentRes, prevRes] = await Promise.allSettled([
+      api.get<any[]>('/appointments', {
+        params: {
+          provider_id: providerId,
+          appointment_date_gte: startCurrent.toISOString().split('T')[0],
+          appointment_date_lte: now.toISOString().split('T')[0],
+          limit: 1000,
+        },
+      }),
+      api.get<any[]>('/appointments', {
+        params: {
+          provider_id: providerId,
+          appointment_date_gte: startPrev.toISOString().split('T')[0],
+          appointment_date_lte: startCurrent.toISOString().split('T')[0],
+          limit: 1000,
+        },
+      }),
+    ]);
+
+    const curr = currentRes.status === 'fulfilled' ? (currentRes.value.data || []) : [];
+    const prev = prevRes.status === 'fulfilled' ? (prevRes.value.data || []) : [];
+
+    const metrics = (list: any[]) => ({
+      totalPatients: new Set(list.map((a: any) => a.patient_id)).size,
+      videoConsultations: list.filter((a) => a.appointment_type === 'virtual').length,
+      rescheduled: list.filter((a) => a.status === 'rescheduled').length,
+      preVisitBookings: list.filter((a) => new Date(a.appointment_date) > new Date()).length,
+      walkinBookings: list.filter((a) => a.appointment_type === 'walk-in').length,
+      followUps: list.filter((a) => a.is_follow_up).length,
     });
 
-    const totalPatients = new Set(appointments?.map((a: any) => a.patient_id)).size;
-    const videoConsultations = appointments?.filter(a => a.appointment_type === 'virtual').length || 0;
-    const rescheduled = appointments?.filter(a => a.status === 'rescheduled').length || 0;
-    const preVisitBookings = appointments?.filter(a => new Date(a.appointment_date) > new Date()).length || 0;
-    const walkinBookings = appointments?.filter(a => a.appointment_type === 'walk-in').length || 0;
-    const followUps = appointments?.filter(a => a.is_follow_up).length || 0;
+    const c = metrics(curr);
+    const p = metrics(prev);
 
     setStatCards([
-      { label: 'Total Patient', value: totalPatients, change: 31, icon: UserCog, color: 'blue' },
-      { label: 'Video...', value: videoConsultations, change: -21, icon: Video, color: 'cyan' },
-      { label: 'Rescheduled', value: rescheduled, change: 64, icon: RefreshCw, color: 'green' },
-      { label: 'Pre Visit Bookings', value: preVisitBookings, change: 38, icon: CalendarCheck, color: 'red' },
-      { label: 'Walkin Bookings', value: walkinBookings, change: 95, icon: PersonStanding, color: 'blue' },
-      { label: 'Follow Ups', value: followUps, change: 76, icon: CheckCircle, color: 'teal' }
+      { label: 'Total Patients', value: c.totalPatients, change: pctChange(c.totalPatients, p.totalPatients), icon: UserCog, color: 'blue' },
+      { label: 'Video Consults', value: c.videoConsultations, change: pctChange(c.videoConsultations, p.videoConsultations), icon: Video, color: 'cyan' },
+      { label: 'Rescheduled', value: c.rescheduled, change: pctChange(c.rescheduled, p.rescheduled), icon: RefreshCw, color: 'green' },
+      { label: 'Pre Visit Bookings', value: c.preVisitBookings, change: pctChange(c.preVisitBookings, p.preVisitBookings), icon: CalendarCheck, color: 'red' },
+      { label: 'Walkin Bookings', value: c.walkinBookings, change: pctChange(c.walkinBookings, p.walkinBookings), icon: PersonStanding, color: 'blue' },
+      { label: 'Follow Ups', value: c.followUps, change: pctChange(c.followUps, p.followUps), icon: CheckCircle, color: 'teal' },
     ]);
+  };
+
+  const loadAvailability = async (providerId: string) => {
+    try {
+      const [locRes, schedRes] = await Promise.allSettled([
+        api.get<any[]>('/provider-locations', { params: { provider_id: providerId, is_active: 'true', limit: 50 } }),
+        api.get<any[]>('/provider-schedules', { params: { provider_id: providerId, is_active: 'true', limit: 200 } }),
+      ]);
+      if (locRes.status === 'fulfilled') setProviderLocations(locRes.value.data || []);
+      if (schedRes.status === 'fulfilled') setAvailabilitySchedule(schedRes.value.data || []);
+    } catch (err) {
+      console.warn('Failed to load availability', err);
+    }
+  };
+
+  const loadAppointmentStatusPie = async (providerId: string) => {
+    const days = appointmentStatsFilter === 'weekly' ? 7 : appointmentStatsFilter === 'monthly' ? 30 : 365;
+    const start = new Date();
+    start.setDate(start.getDate() - days);
+    try {
+      const { data } = await api.get<any[]>('/appointments', {
+        params: {
+          provider_id: providerId,
+          appointment_date_gte: start.toISOString().split('T')[0],
+          limit: 1000,
+        },
+      });
+      const list = data || [];
+      const completed = list.filter((a) => a.status === 'completed').length;
+      const scheduled = list.filter((a) => ['scheduled', 'confirmed'].includes(a.status)).length;
+      const cancelled = list.filter((a) => ['cancelled', 'no-show'].includes(a.status)).length;
+      setAppointmentStatusPie([
+        { name: 'Completed', value: completed, color: CHART_COLORS[1] },
+        { name: 'Scheduled', value: scheduled, color: CHART_COLORS[2] },
+        { name: 'Cancelled', value: cancelled, color: CHART_COLORS[3] },
+      ]);
+    } catch (err) {
+      console.warn('Failed to load appointment status pie', err);
+    }
+  };
+
+  const loadRecentAppointments = async (providerId: string) => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const { data } = await api.get<any[]>('/appointments', {
+        params: {
+          provider_id: providerId,
+          appointment_date_lte: today,
+          order: 'appointment_date:desc',
+          include: 'patients,user_profiles',
+          limit: 10,
+        },
+      });
+      const list = (data || []).map((apt: any) => ({
+        id: apt.id,
+        patient_name:
+          apt.patient_name ||
+          `${apt.first_name || apt.patients?.user_profiles?.first_name || ''} ${apt.last_name || apt.patients?.user_profiles?.last_name || ''}`.trim() ||
+          'Patient',
+        phone: apt.phone || apt.patients?.user_profiles?.phone || '',
+        appointment_date: apt.appointment_date,
+        start_time: apt.start_time,
+        appointment_type: apt.appointment_type,
+        status: apt.status || 'scheduled',
+        consultation_fee_cents: apt.consultation_fee_cents,
+      }));
+      setRecentAppointments(list);
+    } catch (err) {
+      console.warn('Failed to load recent appointments', err);
+    }
+  };
+
+  const buildDailyTrend = (list: any[], days: number): { v: number }[] => {
+    const buckets = new Array(days).fill(0);
+    const end = new Date();
+    end.setHours(0, 0, 0, 0);
+    list.forEach((a: any) => {
+      if (!a.appointment_date) return;
+      const d = new Date(a.appointment_date);
+      d.setHours(0, 0, 0, 0);
+      const diff = Math.floor((end.getTime() - d.getTime()) / (1000 * 60 * 60 * 24));
+      if (diff >= 0 && diff < days) buckets[days - 1 - diff] += 1;
+    });
+    return buckets.map((v) => ({ v }));
+  };
+
+  const loadSummaryCards = async (providerId: string) => {
+    const days = 7;
+    const now = new Date();
+    const startCurrent = new Date();
+    startCurrent.setDate(now.getDate() - days);
+    const startPrev = new Date();
+    startPrev.setDate(now.getDate() - days * 2);
+
+    const [currentRes, prevRes, allRes] = await Promise.allSettled([
+      api.get<any[]>('/appointments', {
+        params: {
+          provider_id: providerId,
+          appointment_date_gte: startCurrent.toISOString().split('T')[0],
+          appointment_date_lte: now.toISOString().split('T')[0],
+          limit: 1000,
+        },
+      }),
+      api.get<any[]>('/appointments', {
+        params: {
+          provider_id: providerId,
+          appointment_date_gte: startPrev.toISOString().split('T')[0],
+          appointment_date_lte: startCurrent.toISOString().split('T')[0],
+          limit: 1000,
+        },
+      }),
+      api.get<any[]>('/appointments', {
+        params: { provider_id: providerId, limit: 1000 },
+      }),
+    ]);
+
+    const curr = currentRes.status === 'fulfilled' ? (currentRes.value.data || []) : [];
+    const prev = prevRes.status === 'fulfilled' ? (prevRes.value.data || []) : [];
+    const all = allRes.status === 'fulfilled' ? (allRes.value.data || []) : [];
+
+    setTotalAppointmentsCard({
+      current: all.length,
+      change: pctChange(curr.length, prev.length),
+      trend: buildDailyTrend(curr, days),
+    });
+
+    const currOnline = curr.filter((a) => a.appointment_type === 'virtual');
+    const prevOnline = prev.filter((a) => a.appointment_type === 'virtual');
+    const allOnline = all.filter((a) => a.appointment_type === 'virtual');
+    setOnlineConsultationsCard({
+      current: allOnline.length,
+      change: pctChange(currOnline.length, prevOnline.length),
+      trend: buildDailyTrend(currOnline, days),
+    });
+
+    const currCancelled = curr.filter((a) => ['cancelled', 'no-show'].includes(a.status));
+    const prevCancelled = prev.filter((a) => ['cancelled', 'no-show'].includes(a.status));
+    const allCancelled = all.filter((a) => ['cancelled', 'no-show'].includes(a.status));
+    setCancelledCard({
+      current: allCancelled.length,
+      change: pctChange(currCancelled.length, prevCancelled.length),
+      trend: buildDailyTrend(currCancelled, days),
+    });
   };
 
   const loadTopPatients = async (providerId: string) => {
@@ -331,7 +571,7 @@ export default function ProviderDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-foreground">
-            Welcome back, Dr. {provider.user_profiles?.last_name}
+            Welcome back{provider.user_profiles?.last_name || provider.last_name ? `, Dr. ${provider.user_profiles?.last_name || provider.last_name}` : ''}
           </h1>
           <p className="text-muted-foreground">Here's what's happening with your practice today</p>
         </div>
@@ -350,7 +590,7 @@ export default function ProviderDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <CardTitle className="text-xl">Upcoming Appointments</CardTitle>
-            <Select defaultValue="today">
+            <Select value={upcomingFilter} onValueChange={(v) => setUpcomingFilter(v as 'today' | 'this-week' | 'this-month')}>
               <SelectTrigger className="w-[140px] h-8 text-sm">
                 <SelectValue />
               </SelectTrigger>
@@ -363,18 +603,30 @@ export default function ProviderDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {upcomingAppointments.slice(0, 1).map((apt) => (
+              {upcomingAppointments.length === 0 ? (
+                <div className="text-center py-8">
+                  <CalendarDays className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+                  <p className="text-muted-foreground text-sm">No upcoming appointments {upcomingFilter === 'today' ? 'today' : upcomingFilter === 'this-week' ? 'this week' : 'this month'}</p>
+                </div>
+              ) : null}
+              {upcomingAppointments.slice(0, 3).map((apt) => (
                 <div key={apt.id} className="border rounded-lg p-4">
                   <div className="flex items-start gap-3 mb-3">
                     <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
                       <UserCog className="text-muted-foreground" />
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <h4 className="font-semibold text-foreground">{apt.patient_name}</h4>
-                      <p className="text-sm text-muted-foreground">#{apt.patient_id.slice(0, 8)}</p>
+                      {apt.department && (
+                        <p className="text-sm text-muted-foreground">{apt.department}</p>
+                      )}
                     </div>
+                    {apt.status && (
+                      <Badge variant={apt.status === 'confirmed' ? 'success' : apt.status === 'scheduled' ? 'info' : 'secondary'}>
+                        {apt.status}
+                      </Badge>
+                    )}
                   </div>
-                  <p className="text-sm font-medium text-foreground mb-2">General Visit</p>
                   <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
                     <CalendarDays className="text-muted-foreground" />
                     <span>{new Date(apt.appointment_date).toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}</span>
@@ -386,7 +638,7 @@ export default function ProviderDashboard() {
                   <div className="grid grid-cols-2 gap-2 text-sm mb-4">
                     <div>
                       <p className="text-muted-foreground">Department</p>
-                      <p className="font-medium text-foreground">{apt.department || 'Cardiology'}</p>
+                      <p className="font-medium text-foreground">{apt.department || 'General'}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Type</p>
@@ -514,7 +766,14 @@ export default function ProviderDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {upcomingAppointments.map((apt) => (
+                {recentAppointments.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                      No recent appointments
+                    </td>
+                  </tr>
+                ) : null}
+                {recentAppointments.map((apt) => (
                   <tr key={apt.id} className="border-b border-border hover:bg-muted">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
@@ -523,7 +782,7 @@ export default function ProviderDashboard() {
                         </div>
                         <div>
                           <p className="font-medium text-foreground">{apt.patient_name}</p>
-                          <p className="text-xs text-muted-foreground">+1 {apt.patient_id.slice(0, 5)} {apt.patient_id.slice(5, 10)}</p>
+                          <p className="text-xs text-muted-foreground">{apt.phone || '—'}</p>
                         </div>
                       </div>
                     </td>
@@ -534,11 +793,11 @@ export default function ProviderDashboard() {
                       {apt.appointment_type === 'virtual' ? 'Online' : 'In-Person'}
                     </td>
                     <td className="py-3 px-4">
-                      <Badge variant="info">
-                        Schedule
+                      <Badge variant={apt.status === 'confirmed' ? 'success' : apt.status === 'completed' ? 'secondary' : apt.status === 'cancelled' ? 'destructive' : 'info'}>
+                        {apt.status || 'Scheduled'}
                       </Badge>
                     </td>
-                    <td className="py-3 px-4 text-sm font-semibold text-foreground">$400</td>
+                    <td className="py-3 px-4 text-sm font-semibold text-foreground">${apt.consultation_fee_cents ? (apt.consultation_fee_cents / 100).toFixed(0) : '--'}</td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
                         <Button
@@ -649,27 +908,74 @@ export default function ProviderDashboard() {
             <CardTitle className="text-xl">Availability</CardTitle>
             <Select value={availabilityFilter} onValueChange={setAvailabilityFilter}>
               <SelectTrigger className="w-[160px] h-8 text-sm">
-                <SelectValue />
+                <SelectValue placeholder="All locations" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Trustcare Clinic</SelectItem>
-                <SelectItem value="clinic1">Main Clinic</SelectItem>
-                <SelectItem value="clinic2">Branch Office</SelectItem>
+                <SelectItem value="all">All locations</SelectItem>
+                {providerLocations.map((loc: any) => (
+                  <SelectItem key={loc.id} value={loc.id}>
+                    {loc.location_name || 'Location'}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((day, index) => (
-                <div key={day} className="flex items-center justify-between py-2 border-b border-border">
-                  <span className="font-medium text-foreground">{day}</span>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="text-muted-foreground" />
-                    <span>11:00 PM - 12:30 PM</span>
+            {(() => {
+              const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+              const formatTime = (t?: string) => {
+                if (!t) return '';
+                const [h, m] = t.split(':').map(Number);
+                const period = h >= 12 ? 'PM' : 'AM';
+                const hr = h % 12 || 12;
+                return `${hr}:${String(m || 0).padStart(2, '0')} ${period}`;
+              };
+              const filteredSchedules = availabilitySchedule.filter((s: any) =>
+                availabilityFilter === 'all' || s.location_id === availabilityFilter
+              );
+              const byDay: Record<number, any[]> = {};
+              filteredSchedules.forEach((s: any) => {
+                const d = s.day_of_week;
+                if (!byDay[d]) byDay[d] = [];
+                byDay[d].push(s);
+              });
+              const days = Object.keys(byDay).map(Number).sort((a, b) => a - b);
+              if (days.length === 0) {
+                return (
+                  <div className="text-center py-8">
+                    <Clock className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
+                    <p className="text-muted-foreground text-sm">No availability configured{availabilityFilter === 'all' ? '' : ' for this location'}</p>
+                    <Button
+                      variant="link"
+                      onClick={() => navigate(`/${i18n.language}/dashboard/provider/schedule`)}
+                      className="mt-2"
+                    >
+                      Set schedule
+                    </Button>
                   </div>
+                );
+              }
+              return (
+                <div className="space-y-3">
+                  {days.map((d) => {
+                    const slots = byDay[d];
+                    return (
+                      <div key={d} className="flex items-start justify-between py-2 border-b border-border">
+                        <span className="font-medium text-foreground">{dayNames[d]}</span>
+                        <div className="flex flex-col items-end gap-1 text-sm text-muted-foreground">
+                          {slots.map((s: any) => (
+                            <div key={s.id} className="flex items-center gap-2">
+                              <Clock className="text-muted-foreground w-3.5 h-3.5" />
+                              <span>{formatTime(s.start_time)} - {formatTime(s.end_time)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
+              );
+            })()}
           </CardContent>
         </Card>
 
@@ -688,28 +994,40 @@ export default function ProviderDashboard() {
             </Select>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={[
-                    { name: 'Completed', value: 60, color: CHART_COLORS[1] },
-                    { name: 'Scheduled', value: 25, color: CHART_COLORS[2] },
-                    { name: 'Cancelled', value: 15, color: CHART_COLORS[3] }
-                  ]}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={2}
-                  dataKey="value"
-                >
-                  {[{ color: CHART_COLORS[1] }, { color: CHART_COLORS[2] }, { color: CHART_COLORS[3] }].map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+            {appointmentStatusPie.reduce((sum, s) => sum + s.value, 0) === 0 ? (
+              <div className="flex items-center justify-center h-[250px] text-center">
+                <p className="text-muted-foreground text-sm">No appointment data for this period</p>
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie
+                      data={appointmentStatusPie}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={90}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {appointmentStatusPie.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={chartTooltipStyle} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex justify-center gap-4 text-xs text-muted-foreground">
+                  {appointmentStatusPie.map((s) => (
+                    <div key={s.name} className="flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }}></span>
+                      <span>{s.name}: {s.value}</span>
+                    </div>
                   ))}
-                </Pie>
-                <Tooltip contentStyle={chartTooltipStyle} />
-              </PieChart>
-            </ResponsiveContainer>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -754,59 +1072,35 @@ export default function ProviderDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="text-xl">Total Appointments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4 mb-4">
-              <div className="text-4xl font-bold text-foreground">658</div>
-              <Badge variant="success">+95%</Badge>
-            </div>
-            <ResponsiveContainer width="100%" height={80}>
-              <BarChart data={[{v:1},{v:2},{v:1.5},{v:2.2},{v:1.8},{v:2.5},{v:2}]}>
-                <Bar dataKey="v" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-            <p className="text-sm text-muted-foreground mt-2">+21% ↑ in last 7 Days</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="text-xl">Online Consultations</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4 mb-4">
-              <div className="text-4xl font-bold text-foreground">125</div>
-              <Badge variant="destructive">-15%</Badge>
-            </div>
-            <ResponsiveContainer width="100%" height={80}>
-              <BarChart data={[{v:1.8},{v:2},{v:1.6},{v:2.2},{v:1.9},{v:2.1},{v:1.7}]}>
-                <Bar dataKey="v" fill={CHART_COLORS[2]} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-            <p className="text-sm text-muted-foreground mt-2">+21% ↓ in last 7 Days</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-4">
-            <CardTitle className="text-xl">Cancelled Appointments</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-4 mb-4">
-              <div className="text-4xl font-bold text-foreground">35</div>
-              <Badge variant="success">+45%</Badge>
-            </div>
-            <ResponsiveContainer width="100%" height={80}>
-              <BarChart data={[{v:1.2},{v:1.5},{v:1.8},{v:1.6},{v:1.9},{v:1.7},{v:2}]}>
-                <Bar dataKey="v" fill={CHART_COLORS[4]} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-            <p className="text-sm text-muted-foreground mt-2">+31% ↑ in last 7 Days</p>
-          </CardContent>
-        </Card>
+        {[
+          { title: 'Total Appointments', data: totalAppointmentsCard, color: CHART_COLORS[0] },
+          { title: 'Online Consultations', data: onlineConsultationsCard, color: CHART_COLORS[2] },
+          { title: 'Cancelled Appointments', data: cancelledCard, color: CHART_COLORS[4] },
+        ].map((card) => (
+          <Card key={card.title}>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-xl">{card.title}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4 mb-4">
+                <div className="text-4xl font-bold text-foreground">{card.data.current}</div>
+                {card.data.current > 0 && (
+                  <Badge variant={card.data.change >= 0 ? 'success' : 'destructive'}>
+                    {card.data.change >= 0 ? '+' : ''}{card.data.change}%
+                  </Badge>
+                )}
+              </div>
+              <ResponsiveContainer width="100%" height={80}>
+                <BarChart data={card.data.trend.length > 0 ? card.data.trend : [{ v: 0 }]}>
+                  <Bar dataKey="v" fill={card.color} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+              <p className="text-sm text-muted-foreground mt-2">
+                {card.data.change >= 0 ? '+' : ''}{card.data.change}% {card.data.change >= 0 ? '↑' : '↓'} in last 7 Days
+              </p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
