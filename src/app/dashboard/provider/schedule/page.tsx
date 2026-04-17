@@ -56,19 +56,27 @@ export default function ProviderScheduleManagement() {
       const providerData = await providerService.getProviderByUserId(user.id);
       setProvider(providerData);
 
-      if (providerData) {
-        const [locationsData, schedulesData] = await Promise.all([
-          providerService.getLocations(providerData.id),
-          providerService.getSchedule(providerData.id),
-        ]);
+      if (!providerData) {
+        setLoading(false);
+        return;
+      }
 
-        setLocations(locationsData);
-        setSchedules(schedulesData);
+      const [locationsResult, schedulesResult] = await Promise.allSettled([
+        providerService.getLocations(providerData.id),
+        providerService.getSchedule(providerData.id),
+      ]);
 
-        if (locationsData.length > 0 && !selectedLocation) {
-          setSelectedLocation(locationsData[0].id);
-        }
+      const locationsData = locationsResult.status === 'fulfilled' ? locationsResult.value : [];
+      const schedulesData = schedulesResult.status === 'fulfilled' ? schedulesResult.value : [];
 
+      setLocations(locationsData);
+      setSchedules(schedulesData);
+
+      if (locationsData.length > 0 && !selectedLocation) {
+        setSelectedLocation(locationsData[0].id);
+      }
+
+      try {
         const today = new Date().toISOString().split('T')[0];
         const { data: overridesData } = await api.get<any[]>('/provider-unavailability', {
           params: {
@@ -78,10 +86,11 @@ export default function ProviderScheduleManagement() {
           },
         });
         setOverrides(overridesData || []);
+      } catch {
+        setOverrides([]);
       }
     } catch (error) {
       console.error('Error loading data:', error);
-      toast.error('Failed to load schedule');
     } finally {
       setLoading(false);
     }
