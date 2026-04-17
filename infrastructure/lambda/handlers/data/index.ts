@@ -89,6 +89,11 @@ function sanitizeColumnName(name: string): string {
   return name;
 }
 
+const NO_UPDATED_AT = new Set([
+  'notifications', 'provider_notifications', 'audit_logs',
+  'blockchain_audit_log', 'audit_failures',
+]);
+
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   const origin = getOrigin(event.headers);
   const method = event.httpMethod;
@@ -265,8 +270,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
               const keys = Object.keys(body).map(sanitizeColumnName);
               const values = Object.values(body);
               const setClauses = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
+              const tsClause = NO_UPDATED_AT.has(table) ? '' : ', updated_at = now()';
 
-              let query = `UPDATE ${table} SET ${setClauses}, updated_at = now() WHERE 1=1`;
+              let query = `UPDATE ${table} SET ${setClauses}${tsClause} WHERE 1=1`;
               let paramIndex = keys.length + 1;
 
               for (const [key, value] of Object.entries(qs)) {
@@ -290,9 +296,10 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           const values = Object.values(body);
           const setClauses = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
           values.push(recordId);
+          const tsClause = NO_UPDATED_AT.has(table) ? '' : ', updated_at = now()';
 
           const result = await client.query(
-            `UPDATE ${table} SET ${setClauses}, updated_at = now() WHERE id = $${values.length} RETURNING *`,
+            `UPDATE ${table} SET ${setClauses}${tsClause} WHERE id = $${values.length} RETURNING *`,
             values
           );
           return result.rows[0] || null;
