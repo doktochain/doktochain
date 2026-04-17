@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { useTheme } from '../../../../contexts/ThemeContext';
 import { supabase } from '../../../../lib/supabase';
-import { providerNotificationService, NotificationPreferences, ProviderNotification, NotificationStats } from '../../../../services/providerNotificationService';
+import { providerNotificationService, NotificationPreferences, NotificationStats } from '../../../../services/providerNotificationService';
+import { notificationService, Notification } from '../../../../services/notificationService';
 import { providerService } from '../../../../services/providerService';
 import { Bell, Mail, MessageSquare, Smartphone, Clock, Check, Trash2, Filter, AlertTriangle, Info, Settings, Inbox, Archive } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -17,7 +18,7 @@ export default function ProviderNotificationsPreferences() {
   const [notificationsSubTab, setNotificationsSubTab] = useState<'all' | 'unread' | 'urgent'>('all');
 
   // Notification state
-  const [notifications, setNotifications] = useState<ProviderNotification[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [stats, setStats] = useState<NotificationStats>({
     total: 0,
     unread: 0,
@@ -29,7 +30,7 @@ export default function ProviderNotificationsPreferences() {
     thisWeek: 0,
   });
   const [loading, setLoading] = useState(true);
-  const [selectedNotification, setSelectedNotification] = useState<ProviderNotification | null>(null);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
   // Preferences state
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
@@ -42,19 +43,23 @@ export default function ProviderNotificationsPreferences() {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (user) {
+      loadNotifications();
+    }
+  }, [user, notificationsSubTab]);
+
   const loadProviderData = async () => {
     try {
       setLoading(true);
-      const providerData = await providerService.getProviderByUserId(user!.id);
+      const providerData = await providerService.getProviderByUserId(user!.id).catch(() => null);
       setProvider(providerData);
 
-      if (providerData) {
-        await Promise.all([
-          loadNotifications(providerData.id),
-          loadStats(providerData.id),
-          loadPreferences(providerData.id),
-        ]);
-      }
+      await Promise.all([
+        loadNotifications(),
+        loadStats(),
+        providerData ? loadPreferences(providerData.id) : Promise.resolve(),
+      ]);
     } catch (error) {
       console.error('Error loading provider data:', error);
     } finally {
@@ -62,27 +67,43 @@ export default function ProviderNotificationsPreferences() {
     }
   };
 
-  const loadNotifications = async (providerId: string) => {
+  const loadNotifications = async () => {
+    if (!user) return;
     try {
-      const filters: any = {};
-
-      if (notificationsSubTab === 'unread') {
-        filters.unreadOnly = true;
-      } else if (notificationsSubTab === 'urgent') {
-        filters.priority = 'urgent';
+      const unreadOnly = notificationsSubTab === 'unread';
+      const { data } = await notificationService.getNotifications(user.id, {
+        unreadOnly,
+        limit: 100,
+      });
+      let list = data || [];
+      if (notificationsSubTab === 'urgent') {
+        list = list.filter((n: any) => n.priority === 'critical' || n.priority === 'high');
       }
-
-      const data = await providerNotificationService.getNotifications(providerId, filters);
-      setNotifications(data);
+      setNotifications(list);
     } catch (error) {
       console.error('Error loading notifications:', error);
     }
   };
 
-  const loadStats = async (providerId: string) => {
+  const loadStats = async () => {
+    if (!user) return;
     try {
-      const data = await providerNotificationService.getNotificationStats(providerId);
-      setStats(data);
+      const { data } = await notificationService.getNotifications(user.id, { limit: 200 });
+      const all = data || [];
+      const now = new Date();
+      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const weekStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+      setStats({
+        total: all.length,
+        unread: all.filter((n: any) => !n.is_read).length,
+        urgent: all.filter((n: any) => n.priority === 'critical' || n.priority === 'high').length,
+        high: all.filter((n: any) => n.priority === 'high').length,
+        normal: all.filter((n: any) => n.priority === 'normal').length,
+        low: all.filter((n: any) => n.priority === 'low').length,
+        today: all.filter((n: any) => new Date(n.created_at) >= todayStart).length,
+        thisWeek: all.filter((n: any) => new Date(n.created_at) >= weekStart).length,
+      });
     } catch (error) {
       console.error('Error loading stats:', error);
     }
@@ -122,23 +143,20 @@ export default function ProviderNotificationsPreferences() {
 
   const handleMarkAsRead = async (notificationId: string) => {
     try {
-      await providerNotificationService.markAsRead(notificationId);
-      if (provider) {
-        await loadNotifications(provider.id);
-        await loadStats(provider.id);
-      }
+      await notificationService.markAsRead(notificationId);
+      await loadNotifications();
+      await loadStats();
     } catch (error) {
       console.error('Error marking as read:', error);
     }
   };
 
   const handleMarkAllAsRead = async () => {
+    if (!user) return;
     try {
-      if (provider) {
-        await providerNotificationService.markAllAsRead(provider.id);
-        await loadNotifications(provider.id);
-        await loadStats(provider.id);
-      }
+      await notificationService.markAllAsRead(user.id);
+      await loadNotifications();
+      await loadStats();
     } catch (error) {
       console.error('Error marking all as read:', error);
     }
@@ -146,11 +164,9 @@ export default function ProviderNotificationsPreferences() {
 
   const handleArchive = async (notificationId: string) => {
     try {
-      await providerNotificationService.archiveNotification(notificationId);
-      if (provider) {
-        await loadNotifications(provider.id);
-        await loadStats(provider.id);
-      }
+      await notificationService.archiveNotification(notificationId);
+      await loadNotifications();
+      await loadStats();
     } catch (error) {
       console.error('Error archiving notification:', error);
     }
@@ -158,11 +174,9 @@ export default function ProviderNotificationsPreferences() {
 
   const handleDelete = async (notificationId: string) => {
     try {
-      await providerNotificationService.deleteNotification(notificationId);
-      if (provider) {
-        await loadNotifications(provider.id);
-        await loadStats(provider.id);
-      }
+      await notificationService.deleteNotification(notificationId);
+      await loadNotifications();
+      await loadStats();
     } catch (error) {
       console.error('Error deleting notification:', error);
     }
@@ -185,6 +199,7 @@ export default function ProviderNotificationsPreferences() {
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'urgent':
+      case 'critical':
         return 'text-red-600 bg-red-50';
       case 'high':
         return 'text-orange-600 bg-orange-50';
@@ -391,7 +406,7 @@ export default function ProviderNotificationsPreferences() {
                   <div
                     key={notification.id}
                     className={`p-4 rounded-lg border transition-all cursor-pointer ${
-                      notification.read_at
+                      notification.is_read
                         ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
                         : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
                     }`}
@@ -403,7 +418,7 @@ export default function ProviderNotificationsPreferences() {
                           <span className={`px-2 py-1 rounded text-xs font-semibold ${getPriorityColor(notification.priority)}`}>
                             {notification.priority.toUpperCase()}
                           </span>
-                          {!notification.read_at && (
+                          {!notification.is_read && (
                             <span className="w-2 h-2 rounded-full" style={{ backgroundColor: currentColors.primary }}></span>
                           )}
                           <span className="text-xs text-gray-500 dark:text-gray-400">{formatTime(notification.created_at)}</span>
@@ -412,7 +427,7 @@ export default function ProviderNotificationsPreferences() {
                         <p className="text-gray-600 dark:text-gray-400 text-sm">{notification.message}</p>
                       </div>
                       <div className="flex items-center gap-2 ml-4">
-                        {!notification.read_at && (
+                        {!notification.is_read && (
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
