@@ -4,7 +4,8 @@ import { providerService } from '../../../../services/providerService';
 import { providerDashboardService, DashboardStats, AppointmentMetrics, FinancialMetrics, PatientInsights } from '../../../../services/providerDashboardService';
 import { providerOnboardingService } from '../../../../services/providerOnboardingService';
 import { api } from '../../../../lib/api-client';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import ProviderOnboardingWizard from '../../../../components/provider/ProviderOnboardingWizard';
 import { CalendarDays, DollarSign, Users, Video, TrendingUp, Pill, Mail, FileText, UserCog, CheckCircle, CalendarCheck, CalendarX, PersonStanding, RefreshCw, Clock, ChevronDown, FileHeart, Receipt, CheckCheck, Bell } from 'lucide-react';
 import {
@@ -47,6 +48,8 @@ interface TopPatient {
 
 export default function ProviderDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { i18n } = useTranslation();
   const [provider, setProvider] = useState<any>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [appointmentMetrics, setAppointmentMetrics] = useState<AppointmentMetrics | null>(null);
@@ -332,7 +335,10 @@ export default function ProviderDashboard() {
           </h1>
           <p className="text-muted-foreground">Here's what's happening with your practice today</p>
         </div>
-        <Button className="flex items-center gap-2">
+        <Button
+          className="flex items-center gap-2"
+          onClick={() => navigate(`/${i18n.language}/dashboard/provider/telemedicine`)}
+        >
           <Video size={20} />
           Start Video Session
         </Button>
@@ -387,14 +393,24 @@ export default function ProviderDashboard() {
                       <p className="font-medium text-foreground">{apt.appointment_type === 'virtual' ? 'Online Consultation' : 'In-Person'}</p>
                     </div>
                   </div>
-                  <Button className="w-full mb-2">
+                  <Button
+                    className="w-full mb-2"
+                    onClick={() => navigate(`/${i18n.language}/dashboard/provider/appointments`)}
+                  >
                     Start Appointment
                   </Button>
                   <div className="grid grid-cols-2 gap-2">
-                    <Button className="bg-black text-white hover:bg-black/90 flex items-center gap-2">
+                    <Button
+                      className="bg-black text-white hover:bg-black/90 flex items-center gap-2"
+                      onClick={() => navigate(`/${i18n.language}/dashboard/messages`)}
+                    >
                       <Mail /> Chat Now
                     </Button>
-                    <Button variant="outline" className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex items-center gap-2"
+                      onClick={() => navigate(`/${i18n.language}/dashboard/provider/telemedicine`)}
+                    >
                       <Video /> Video Consultation
                     </Button>
                   </div>
@@ -525,10 +541,22 @@ export default function ProviderDashboard() {
                     <td className="py-3 px-4 text-sm font-semibold text-foreground">$400</td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="View Details"
+                          onClick={() => navigate(`/${i18n.language}/dashboard/provider/appointments`)}
+                        >
                           <FileText className="text-muted-foreground" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          title="Clinical Notes"
+                          onClick={() => navigate(`/${i18n.language}/dashboard/provider/clinical-notes`)}
+                        >
                           <ChevronDown className="text-muted-foreground" />
                         </Button>
                       </div>
@@ -872,7 +900,7 @@ export default function ProviderDashboard() {
           <CardContent>
             <div className="grid grid-cols-3 gap-4">
               <Link
-                to="/dashboard/provider/appointments/create"
+                to={`/${i18n.language}/dashboard/provider/appointments/create`}
                 className="flex flex-col items-center justify-center p-4 border-2 border-border rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
               >
                 <CalendarDays className="text-2xl text-blue-600 mb-2" />
@@ -880,7 +908,7 @@ export default function ProviderDashboard() {
               </Link>
 
               <Link
-                to="/dashboard/provider/prescriptions/create"
+                to={`/${i18n.language}/dashboard/provider/prescriptions/create`}
                 className="flex flex-col items-center justify-center p-4 border-2 border-border rounded-lg hover:border-green-500 hover:bg-green-50 transition-colors"
               >
                 <Pill className="text-2xl text-green-600 mb-2" />
@@ -888,7 +916,7 @@ export default function ProviderDashboard() {
               </Link>
 
               <Link
-                to="/dashboard/messages"
+                to={`/${i18n.language}/dashboard/messages`}
                 className="relative flex flex-col items-center justify-center p-4 border-2 border-border rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
               >
                 {stats?.unreadMessageCount ? (
@@ -901,7 +929,7 @@ export default function ProviderDashboard() {
               </Link>
 
               <Link
-                to="/dashboard/patient/medical-records"
+                to={`/${i18n.language}/dashboard/patient/medical-records`}
                 className="flex flex-col items-center justify-center p-4 border-2 border-border rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-colors"
               >
                 <FileHeart className="text-2xl text-blue-600 mb-2" />
@@ -909,7 +937,7 @@ export default function ProviderDashboard() {
               </Link>
 
               <Link
-                to="/dashboard/provider/insurance"
+                to={`/${i18n.language}/dashboard/provider/insurance`}
                 className="flex flex-col items-center justify-center p-4 border-2 border-border rounded-lg hover:border-cyan-500 hover:bg-cyan-50 transition-colors"
               >
                 <Receipt className="text-2xl text-cyan-600 mb-2" />
@@ -917,7 +945,7 @@ export default function ProviderDashboard() {
               </Link>
 
               <Link
-                to="/dashboard/provider/reports"
+                to={`/${i18n.language}/dashboard/provider/reports`}
                 className="flex flex-col items-center justify-center p-4 border-2 border-border rounded-lg hover:border-yellow-500 hover:bg-yellow-50 transition-colors"
               >
                 <FileText className="text-2xl text-yellow-600 mb-2" />
