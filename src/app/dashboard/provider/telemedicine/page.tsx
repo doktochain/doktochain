@@ -57,6 +57,16 @@ export default function ProviderTelemedicinePage() {
         entry.provider_id,
         entry.patient_id
       );
+      try {
+        await advancedTelemedicineService.startSession(session.id);
+      } catch (startErr) {
+        console.error('Error starting session:', startErr);
+      }
+      try {
+        await advancedTelemedicineService.admitPatient(entry.id);
+      } catch (admitErr) {
+        console.error('Error marking waiting room admitted:', admitErr);
+      }
       setActiveSessionId(session.id);
       setActiveAppointmentId(entry.appointment_id);
       setViewMode('consultation');
