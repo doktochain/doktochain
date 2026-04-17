@@ -407,25 +407,36 @@ export const prescriptionService = {
 
   async getProviderRefillRequests(providerUserId: string): Promise<any[]> {
     const { data, error } = await api.get<any[]>('/prescription-refill-requests', {
-      params: { status: 'pending', provider_id: providerUserId, order: 'request_date:desc' }
+      params: { provider_id: providerUserId, order: 'requested_at:desc' }
     });
 
     if (error) throw error;
 
+    const normalized = (data || []).map((r: any) => ({
+      ...r,
+      reason: r.reason ?? r.request_reason ?? null,
+      request_date: r.request_date ?? r.requested_at ?? r.created_at ?? null,
+      reviewed_at: r.reviewed_at ?? r.responded_at ?? null,
+      denial_reason:
+        r.denial_reason ?? (r.status === 'denied' ? r.response_notes : null),
+      approval_notes:
+        r.approval_notes ?? (r.status === 'approved' ? r.response_notes : null),
+    }));
+
     try {
       await auditLog.dataAccessed('prescription_refill_request', 'provider_refills', providerUserId, 'provider', {
-        action: 'read', records_count: (data || []).length,
+        action: 'read', records_count: normalized.length,
       });
     } catch {}
 
-    return data || [];
+    return normalized;
   },
 
-  async approveRefill(refillId: string, approvedBy: string): Promise<any> {
+  async approveRefill(refillId: string, approvedBy: string, notes?: string): Promise<any> {
     const { data, error } = await api.put<any>(`/prescription-refill-requests/${refillId}`, {
       status: 'approved',
-      reviewed_by: approvedBy,
-      reviewed_at: new Date().toISOString(),
+      response_notes: notes || null,
+      responded_at: new Date().toISOString(),
     });
 
     if (error) throw error;
@@ -448,12 +459,15 @@ export const prescriptionService = {
     const { data, error } = await api.get<any[]>('/prescription-refill-requests', {
       params: {
         patient_id: patientId,
-        order: 'created_at.desc',
-        include: 'prescriptions,prescription_items,providers',
+        order: 'created_at:desc',
       },
     });
     if (error) throw error;
-    return data || [];
+    return (data || []).map((r: any) => ({
+      ...r,
+      reason: r.reason ?? r.request_reason ?? null,
+      request_date: r.request_date ?? r.requested_at ?? r.created_at ?? null,
+    }));
   },
 
   async getPatientRefillablePrescriptions(patientId: string): Promise<any[]> {
@@ -474,7 +488,7 @@ export const prescriptionService = {
       prescription_id: reqData.prescription_id,
       patient_id: reqData.patient_id,
       provider_id: reqData.provider_id,
-      notes: reqData.notes || null,
+      request_reason: reqData.notes || null,
       status: 'pending',
     });
 
@@ -492,9 +506,8 @@ export const prescriptionService = {
   async denyRefill(refillId: string, reason: string, deniedBy?: string): Promise<any> {
     const { data, error } = await api.put<any>(`/prescription-refill-requests/${refillId}`, {
       status: 'denied',
-      denial_reason: reason,
-      reviewed_by: deniedBy,
-      reviewed_at: new Date().toISOString(),
+      response_notes: reason,
+      responded_at: new Date().toISOString(),
     });
 
     if (error) throw error;
