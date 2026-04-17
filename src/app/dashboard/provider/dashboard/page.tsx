@@ -3,7 +3,7 @@ import { useAuth } from '../../../../contexts/AuthContext';
 import { providerService } from '../../../../services/providerService';
 import { providerDashboardService, DashboardStats, AppointmentMetrics, FinancialMetrics, PatientInsights } from '../../../../services/providerDashboardService';
 import { providerOnboardingService } from '../../../../services/providerOnboardingService';
-import { supabase } from '../../../../lib/supabase';
+import { api } from '../../../../lib/api-client';
 import { Link } from 'react-router-dom';
 import ProviderOnboardingWizard from '../../../../components/provider/ProviderOnboardingWizard';
 import { CalendarDays, DollarSign, Users, Video, TrendingUp, Pill, Mail, FileText, UserCog, CheckCircle, CalendarCheck, CalendarX, PersonStanding, RefreshCw, Clock, ChevronDown, FileHeart, Receipt, CheckCheck, Bell } from 'lucide-react';
@@ -75,8 +75,14 @@ export default function ProviderDashboard() {
     setError(null);
     try {
       const providerData = await providerService.getProviderByUserId(user.id);
+
       if (!providerData || providerData.onboarding_status === 'pending' || providerData.onboarding_status === 'rejected') {
-        const existingApp = await providerOnboardingService.getApplicationByUserId(user.id);
+        let existingApp: any = null;
+        try {
+          existingApp = await providerOnboardingService.getApplicationByUserId(user.id);
+        } catch (appErr) {
+          console.warn('Unable to load onboarding application:', appErr);
+        }
         setOnboardingApplication(existingApp);
         if (!existingApp || existingApp.application_status === 'draft' || existingApp.application_status === 'resubmission_required') {
           setShowOnboarding(true);
@@ -94,21 +100,23 @@ export default function ProviderDashboard() {
 
       setProvider(providerData);
 
-      const [dashStats, apptMetrics, finMetrics, ptInsights] = await Promise.all([
+      const [statsRes, metricsRes, finRes, insightsRes] = await Promise.allSettled([
         providerDashboardService.getDashboardStats(providerData.id),
         providerDashboardService.getAppointmentMetrics(providerData.id, 30),
         providerDashboardService.getFinancialMetrics(providerData.id, 30),
         providerDashboardService.getPatientInsights(providerData.id, 30)
       ]);
 
-      setStats(dashStats);
-      setAppointmentMetrics(apptMetrics);
-      setFinancialMetrics(finMetrics);
-      setPatientInsights(ptInsights);
+      if (statsRes.status === 'fulfilled') setStats(statsRes.value);
+      if (metricsRes.status === 'fulfilled') setAppointmentMetrics(metricsRes.value);
+      if (finRes.status === 'fulfilled') setFinancialMetrics(finRes.value);
+      if (insightsRes.status === 'fulfilled') setPatientInsights(insightsRes.value);
 
-      await loadUpcomingAppointments(providerData.id);
-      await loadStatCards(providerData.id);
-      await loadTopPatients(providerData.id);
+      await Promise.allSettled([
+        loadUpcomingAppointments(providerData.id),
+        loadStatCards(providerData.id),
+        loadTopPatients(providerData.id),
+      ]);
     } catch (err) {
       console.error('Error loading dashboard:', err);
       setError('Unable to load dashboard data. Please try again.');
@@ -118,25 +126,28 @@ export default function ProviderDashboard() {
   };
 
   const loadUpcomingAppointments = async (providerId: string) => {
-    const { data } = await supabase
-      .from('appointments')
-      .select('*, patients(*, user_profiles(first_name, last_name))')
-      .eq('provider_id', providerId)
-      .gte('appointment_date', new Date().toISOString().split('T')[0])
-      .order('appointment_date', { ascending: true })
-      .order('start_time', { ascending: true })
-      .limit(5);
-
-    if (data) {
-      setUpcomingAppointments(data.map(apt => ({
-        id: apt.id,
-        patient_name: `${apt.patients?.user_profiles?.first_name || ''} ${apt.patients?.user_profiles?.last_name || ''}`,
-        patient_id: apt.patient_id,
-        appointment_type: apt.appointment_type,
-        appointment_date: apt.appointment_date,
-        start_time: apt.start_time,
-        department: apt.department
-      })));
+    try {
+      const { data } = await api.get<any[]>('/appointments', {
+        params: {
+          provider_id: providerId,
+          appointment_date_gte: new Date().toISOString().split('T')[0],
+          order: 'appointment_date:asc',
+          limit: 5,
+        },
+      });
+      if (data) {
+        setUpcomingAppointments(data.map((apt: any) => ({
+          id: apt.id,
+          patient_name: apt.patient_name || `${apt.first_name || ''} ${apt.last_name || ''}`.trim() || 'Patient',
+          patient_id: apt.patient_id,
+          appointment_type: apt.appointment_type,
+          appointment_date: apt.appointment_date,
+          start_time: apt.start_time,
+          department: apt.department,
+        })));
+      }
+    } catch (err) {
+      console.warn('Failed to load upcoming appointments', err);
     }
   };
 
@@ -145,13 +156,14 @@ export default function ProviderDashboard() {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    const { data: appointments } = await supabase
-      .from('appointments')
-      .select('*')
-      .eq('provider_id', providerId)
-      .gte('appointment_date', startDate.toISOString().split('T')[0]);
+    const { data: appointments } = await api.get<any[]>('/appointments', {
+      params: {
+        provider_id: providerId,
+        appointment_date_gte: startDate.toISOString().split('T')[0],
+      },
+    });
 
-    const totalPatients = new Set(appointments?.map(a => a.patient_id)).size;
+    const totalPatients = new Set(appointments?.map((a: any) => a.patient_id)).size;
     const videoConsultations = appointments?.filter(a => a.appointment_type === 'virtual').length || 0;
     const rescheduled = appointments?.filter(a => a.status === 'rescheduled').length || 0;
     const preVisitBookings = appointments?.filter(a => new Date(a.appointment_date) > new Date()).length || 0;
@@ -173,20 +185,21 @@ export default function ProviderDashboard() {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    const { data: appointments } = await supabase
-      .from('appointments')
-      .select('*, patients(*, user_profiles(first_name, last_name, phone))')
-      .eq('provider_id', providerId)
-      .gte('appointment_date', startDate.toISOString().split('T')[0]);
+    const { data: appointments } = await api.get<any[]>('/appointments', {
+      params: {
+        provider_id: providerId,
+        appointment_date_gte: startDate.toISOString().split('T')[0],
+      },
+    });
 
     const patientCounts: { [key: string]: { name: string; phone: string; count: number } } = {};
 
-    appointments?.forEach(apt => {
+    appointments?.forEach((apt: any) => {
       const patientId = apt.patient_id;
       if (!patientCounts[patientId]) {
         patientCounts[patientId] = {
-          name: `${apt.patients?.user_profiles?.first_name || ''} ${apt.patients?.user_profiles?.last_name || ''}`,
-          phone: apt.patients?.user_profiles?.phone || '',
+          name: apt.patient_name || `${apt.first_name || ''} ${apt.last_name || ''}`.trim() || 'Patient',
+          phone: apt.phone || '',
           count: 0
         };
       }
