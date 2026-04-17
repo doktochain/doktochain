@@ -156,12 +156,12 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           let paramIndex = 1;
 
           const qs = event.queryStringParameters || {};
-          const orderBy = qs.order;
+          const orderBy = qs.order || qs.order_by;
           const limitVal = qs.limit;
           const countOnly = qs.count === 'true';
 
           for (const [key, value] of Object.entries(qs)) {
-            if (['order', 'limit', 'offset', 'count', 'expand'].includes(key)) continue;
+            if (['order', 'order_by', 'limit', 'offset', 'count', 'expand', 'select', 'include'].includes(key)) continue;
             if (value === undefined) continue;
 
             if (key.endsWith('_gte')) {
