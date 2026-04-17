@@ -1,24 +1,54 @@
 import { useState, useEffect } from 'react';
-import { FileText, Plus, Search } from 'lucide-react';
+import { FileText, Plus, Search, X } from 'lucide-react';
 import { ehrService } from '../../../../services/ehrService';
 import { providerService } from '../../../../services/providerService';
+import { patientService } from '../../../../services/patientService';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '../../../../components/ui/card';
 import { Badge } from '../../../../components/ui/badge';
 import { Input } from '../../../../components/ui/input';
 import { Button } from '../../../../components/ui/button';
 
+interface PatientHit {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  date_of_birth?: string;
+  health_card_number?: string;
+}
+
 export default function ClinicalNotesPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
   const [notes, setNotes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [patientResults, setPatientResults] = useState<PatientHit[]>([]);
+  const [selectedPatient, setSelectedPatient] = useState<PatientHit | null>(null);
 
   useEffect(() => {
     loadNotes();
   }, [user]);
+
+  useEffect(() => {
+    const term = searchTerm.trim();
+    if (selectedPatient) return;
+    if (term.length < 2) {
+      setPatientResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const results = await patientService.searchPatients(term, 8);
+        setPatientResults(results as PatientHit[]);
+      } catch {}
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm, selectedPatient]);
 
   const loadNotes = async () => {
     if (!user) return;
@@ -41,14 +71,27 @@ export default function ClinicalNotesPage() {
   };
 
   const handleCreateNew = () => {
-    navigate('/dashboard/provider/clinical-documentation');
+    navigate(`/${i18n.language}/dashboard/provider/clinical-documentation`);
   };
 
-  const filteredNotes = notes.filter(
-    (note) =>
-      note.chief_complaint?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      note.assessment?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleSelectPatient = (patient: PatientHit) => {
+    setSelectedPatient(patient);
+    setPatientResults([]);
+    setSearchTerm('');
+  };
+
+  const filteredNotes = (() => {
+    if (selectedPatient) {
+      return notes.filter((n) => n.patient_id === selectedPatient.id);
+    }
+    if (!searchTerm) return notes;
+    const lower = searchTerm.toLowerCase();
+    return notes.filter(
+      (note) =>
+        note.chief_complaint?.toLowerCase().includes(lower) ||
+        note.assessment?.toLowerCase().includes(lower)
+    );
+  })();
 
   return (
     <div className="p-6 space-y-6">
@@ -67,15 +110,48 @@ export default function ClinicalNotesPage() {
       <Card className="shadow-lg">
         <CardContent className="p-6">
           <div className="mb-6">
+            {selectedPatient && (
+              <div className="mb-3 flex items-center justify-between bg-sky-50 border border-sky-200 rounded-lg p-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    Showing notes for {selectedPatient.first_name} {selectedPatient.last_name}
+                  </p>
+                  {selectedPatient.email && (
+                    <p className="text-xs text-muted-foreground">{selectedPatient.email}</p>
+                  )}
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedPatient(null)}>
+                  <X className="w-4 h-4 mr-1" /> Clear
+                </Button>
+              </div>
+            )}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
               <Input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search notes by chief complaint or assessment..."
+                placeholder={selectedPatient ? 'Filter by chief complaint or assessment...' : 'Search by patient name, email, health card, DOB, or note content...'}
                 className="pl-10 py-3 h-12"
               />
+              {!selectedPatient && patientResults.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                  {patientResults.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => handleSelectPatient(p)}
+                      className="w-full text-left px-4 py-3 hover:bg-sky-50 border-b border-gray-100 last:border-0"
+                    >
+                      <p className="font-medium text-foreground">{p.first_name} {p.last_name}</p>
+                      {(p.email || p.date_of_birth || p.health_card_number) && (
+                        <p className="text-xs text-muted-foreground">
+                          {[p.email, p.health_card_number, p.date_of_birth].filter(Boolean).join(' • ')}
+                        </p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -106,7 +182,7 @@ export default function ClinicalNotesPage() {
                 <Card
                   key={note.id}
                   className="p-4 bg-muted hover:bg-accent transition-colors cursor-pointer"
-                  onClick={() => navigate(`/dashboard/provider/clinical-documentation?note=${note.id}`)}
+                  onClick={() => navigate(`/${i18n.language}/dashboard/provider/clinical-documentation?note=${note.id}`)}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div>
