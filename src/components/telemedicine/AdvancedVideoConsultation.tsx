@@ -152,11 +152,17 @@ export default function AdvancedVideoConsultation({
   };
 
   const handleEndCall = async () => {
+    const isDemo = sessionId.startsWith('demo-');
     try {
-      await advancedTelemedicineService.endSession(sessionId);
-      onEndCall();
-    } catch (error) {
+      if (!isDemo) {
+        await advancedTelemedicineService.endSession(sessionId);
+        toast.success('Session ended');
+      }
+    } catch (error: any) {
       console.error('Error ending call:', error);
+      toast.error(error?.message || 'Failed to end session');
+    } finally {
+      onEndCall();
     }
   };
 
