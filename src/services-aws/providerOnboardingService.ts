@@ -281,53 +281,43 @@ export const providerOnboardingService = {
 
     if (!application) throw new Error('Application not found');
 
-    const { data: existingProviders } = await api.get<any[]>('/providers', {
-      params: { user_id: application.user_id },
+    const { data: existingProviders } = await api.get<any[]>('/providers/admin/all', {
+      params: { user_id: application.user_id, limit: 1 },
     });
 
     const existingProvider = existingProviders && existingProviders.length > 0 ? existingProviders[0] : null;
 
+    const providerPayload = {
+      provider_type: application.provider_type,
+      license_number: application.license_number,
+      license_province: application.license_province,
+      license_expiry: application.license_expiry,
+      professional_title: application.professional_title,
+      bio: application.bio,
+      years_of_experience: application.years_of_experience,
+      languages_spoken: application.languages_spoken,
+      accepts_new_patients: application.accepts_new_patients,
+      is_verified: true,
+      is_active: true,
+      onboarding_status: 'approved',
+      approved_by: reviewerId,
+      approved_at: new Date().toISOString(),
+    };
+
     let providerId: string;
 
     if (existingProvider) {
-      const { data: provider, error: providerError } = await api.put<any>(`/providers/${existingProvider.id}`, {
-        provider_type: application.provider_type,
-        license_number: application.license_number,
-        license_province: application.license_province,
-        license_expiry: application.license_expiry,
-        professional_title: application.professional_title,
-        bio: application.bio,
-        years_of_experience: application.years_of_experience,
-        languages_spoken: application.languages_spoken,
-        accepts_new_patients: application.accepts_new_patients,
-        is_verified: true,
-        is_active: true,
-        onboarding_status: 'approved',
-        approved_by: reviewerId,
-        approved_at: new Date().toISOString()
-      });
-
+      const { data: provider, error: providerError } = await api.put<any>(
+        `/providers/admin/${existingProvider.id}`,
+        providerPayload
+      );
       if (providerError) throw providerError;
       providerId = provider!.id;
     } else {
-      const { data: provider, error: providerError } = await api.post<any>('/providers', {
-        user_id: application.user_id,
-        provider_type: application.provider_type,
-        license_number: application.license_number,
-        license_province: application.license_province,
-        license_expiry: application.license_expiry,
-        professional_title: application.professional_title,
-        bio: application.bio,
-        years_of_experience: application.years_of_experience,
-        languages_spoken: application.languages_spoken,
-        accepts_new_patients: application.accepts_new_patients,
-        is_verified: true,
-        is_active: true,
-        onboarding_status: 'approved',
-        approved_by: reviewerId,
-        approved_at: new Date().toISOString()
-      });
-
+      const { data: provider, error: providerError } = await api.post<any>(
+        '/providers/admin/create',
+        { ...providerPayload, user_id: application.user_id }
+      );
       if (providerError) throw providerError;
       providerId = provider!.id;
     }
@@ -345,6 +335,19 @@ export const providerOnboardingService = {
       action_description: 'Provider application approved and provider account activated',
       performed_by: reviewerId
     });
+
+    try {
+      await api.post('/notifications', {
+        user_id: application.user_id,
+        title: 'Application Approved',
+        message: 'Your provider application has been approved! You can now access all provider features.',
+        type: 'application_update',
+        category: 'system',
+        priority: 'high',
+        is_read: false,
+        metadata: { application_id: applicationId, provider_id: providerId, action: 'approved' },
+      });
+    } catch {}
 
     try {
       await blockchainAuditService.logEvent({
@@ -374,10 +377,14 @@ export const providerOnboardingService = {
     });
 
     if (application) {
-      await api.put('/providers', {
-        filters: { user_id: application.user_id },
-        updates: { onboarding_status: 'rejected' }
+      const { data: existingProviders } = await api.get<any[]>('/providers/admin/all', {
+        params: { user_id: application.user_id, limit: 1 },
       });
+      if (existingProviders && existingProviders.length > 0) {
+        await api.put(`/providers/admin/${existingProviders[0].id}`, {
+          onboarding_status: 'rejected',
+        });
+      }
     }
 
     await api.post('/provider-verification-history', {
@@ -406,12 +413,29 @@ export const providerOnboardingService = {
   },
 
   async requestResubmission(applicationId: string, reviewerId: string, notes: string): Promise<void> {
+    const { data: application } = await api.get<ProviderOnboardingApplication>(`/provider-onboarding-applications/${applicationId}`);
+
     await api.put(`/provider-onboarding-applications/${applicationId}`, {
       application_status: 'resubmission_required',
       reviewed_by: reviewerId,
       resubmission_notes: notes,
       resubmission_date: new Date().toISOString(),
     });
+
+    if (application?.user_id) {
+      try {
+        await api.post('/notifications', {
+          user_id: application.user_id,
+          title: 'Application Changes Requested',
+          message: `Your provider application requires changes: ${notes}`,
+          type: 'application_update',
+          category: 'system',
+          priority: 'high',
+          is_read: false,
+          metadata: { application_id: applicationId, action: 'resubmission_requested' },
+        });
+      } catch {}
+    }
 
     await api.post('/provider-verification-history', {
       application_id: applicationId,
