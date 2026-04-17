@@ -188,7 +188,7 @@ export default function ProvincialEHRPage() {
               <li>• Each provincial system uses FHIR R4 standards for interoperability</li>
               <li>• Sync schedules are configurable per province</li>
               <li>• Data is synchronized bidirectionally when enabled</li>
-              <li>• All sync operations are logged in the blockchain audit trail</li>
+              <li>• All sync operations are logged in the cryptographic audit trail</li>
               <li>• Rate limits are enforced to comply with provincial policies</li>
             </ul>
           </div>
