@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { providerService, ProviderSchedule, ProviderLocation } from '../../../../services/providerService';
 import { api } from '../../../../lib/api-client';
-import { Clock, Plus, Trash2, MapPin, CalendarOff, CalendarPlus } from 'lucide-react';
+import { Clock, Plus, Trash2, MapPin, CalendarOff, CalendarPlus, Pencil as Edit } from 'lucide-react';
 import { ConfirmDialog } from '../../../../components/ui/confirm-dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '../../../../components/ui/card';
 import { Badge } from '../../../../components/ui/badge';
@@ -36,6 +36,7 @@ export default function ProviderScheduleManagement() {
   });
   const [bufferMinutes, setBufferMinutes] = useState(0);
   const [showOverrideModal, setShowOverrideModal] = useState(false);
+  const [editingOverrideId, setEditingOverrideId] = useState<string | null>(null);
   const [newOverride, setNewOverride] = useState({
     override_date: '',
     is_available: true,
@@ -43,6 +44,7 @@ export default function ProviderScheduleManagement() {
     end_time: '17:00',
     slot_duration_minutes: 30,
     reason: '',
+    location_id: '',
   });
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; type: 'schedule' | 'override' | 'location' } | null>(null);
 
@@ -144,40 +146,74 @@ export default function ProviderScheduleManagement() {
     if (!provider || !newOverride.override_date) return;
 
     try {
-      const insertData: any = {
+      const payload: any = {
         provider_id: provider.id,
         start_date: newOverride.override_date,
         end_date: newOverride.override_date,
         reason: newOverride.reason || (newOverride.is_available ? 'Custom hours' : 'Unavailable'),
         is_recurring: false,
-        recurrence_pattern: newOverride.is_available
-          ? {
-              is_available: true,
-              start_time: newOverride.start_time,
-              end_time: newOverride.end_time,
-              slot_duration_minutes: newOverride.slot_duration_minutes,
-            }
-          : { is_available: false },
+        recurrence_pattern: {
+          ...(newOverride.is_available
+            ? {
+                is_available: true,
+                start_time: newOverride.start_time,
+                end_time: newOverride.end_time,
+                slot_duration_minutes: newOverride.slot_duration_minutes,
+              }
+            : { is_available: false }),
+          ...(newOverride.location_id ? { location_id: newOverride.location_id } : {}),
+        },
       };
 
-      const { error } = await api.post('/provider-unavailability', insertData);
-      if (error) throw error;
+      if (editingOverrideId) {
+        const { error } = await api.put(`/provider-unavailability/${editingOverrideId}`, payload);
+        if (error) throw error;
+        toast.success('Date override updated');
+      } else {
+        const { error } = await api.post('/provider-unavailability', payload);
+        if (error) throw error;
+        toast.success('Date override saved');
+      }
 
-      toast.success('Date override saved');
-      setShowOverrideModal(false);
-      setNewOverride({
-        override_date: '',
-        is_available: true,
-        start_time: '09:00',
-        end_time: '17:00',
-        slot_duration_minutes: 30,
-        reason: '',
-      });
+      closeOverrideModal();
       loadData();
     } catch (error: any) {
-      console.error('Error adding override:', error);
-      toast.error(`Failed to add override: ${error.message || 'Unknown error'}`);
+      console.error('Error saving override:', error);
+      toast.error(`Failed to save override: ${error.message || 'Unknown error'}`);
     }
+  };
+
+  const closeOverrideModal = () => {
+    setShowOverrideModal(false);
+    setEditingOverrideId(null);
+    setNewOverride({
+      override_date: '',
+      is_available: true,
+      start_time: '09:00',
+      end_time: '17:00',
+      slot_duration_minutes: 30,
+      reason: '',
+      location_id: selectedLocation || '',
+    });
+  };
+
+  const openEditOverride = (override: any) => {
+    const rp = override.recurrence_pattern || {};
+    setEditingOverrideId(override.id);
+    setNewOverride({
+      override_date: override.start_date || override.override_date || '',
+      is_available: rp.is_available !== false,
+      start_time: rp.start_time || '09:00',
+      end_time: rp.end_time || '17:00',
+      slot_duration_minutes: rp.slot_duration_minutes || 30,
+      reason: override.reason || '',
+      location_id: rp.location_id || override.location_id || '',
+    });
+    setShowOverrideModal(true);
+  };
+
+  const getOverrideLocationId = (override: any): string | null => {
+    return override?.recurrence_pattern?.location_id || override?.location_id || null;
   };
 
   const handleDeleteOverride = (overrideId: string) => {
@@ -465,7 +501,19 @@ export default function ProviderScheduleManagement() {
                       <p className="text-sm text-muted-foreground mt-1">Set custom hours or block specific dates</p>
                     </div>
                     <Button
-                      onClick={() => setShowOverrideModal(true)}
+                      onClick={() => {
+                        setEditingOverrideId(null);
+                        setNewOverride({
+                          override_date: '',
+                          is_available: true,
+                          start_time: '09:00',
+                          end_time: '17:00',
+                          slot_duration_minutes: 30,
+                          reason: '',
+                          location_id: selectedLocation || '',
+                        });
+                        setShowOverrideModal(true);
+                      }}
                       className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700"
                       size="sm"
                     >
@@ -474,63 +522,89 @@ export default function ProviderScheduleManagement() {
                     </Button>
                   </div>
 
-                  {overrides.length === 0 ? (
-                    <div className="text-center py-12">
-                      <CalendarOff className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground mb-1">No date overrides set</p>
-                      <p className="text-sm text-muted-foreground">Use overrides to block days off or set custom hours for specific dates</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {overrides.map((override) => {
-                        const rp = override.recurrence_pattern || {};
-                        const isAvailable = rp.is_available !== false;
-                        const overrideDate = override.start_date || override.override_date;
-                        return (
-                        <div
-                          key={override.id}
-                          className={`flex items-center gap-4 p-4 rounded-lg border ${
-                            isAvailable
-                              ? 'bg-sky-50/50 border-sky-100'
-                              : 'bg-red-50/50 border-red-100'
-                          }`}
-                        >
-                          <div className={`p-2 rounded-lg ${isAvailable ? 'bg-sky-100' : 'bg-red-100'}`}>
-                            {isAvailable ? (
-                              <Clock className="w-5 h-5 text-sky-600" />
-                            ) : (
-                              <CalendarOff className="w-5 h-5 text-red-600" />
-                            )}
-                          </div>
-                          <div className="flex-1">
-                            <p className="font-medium text-foreground">
-                              {new Date(overrideDate + 'T00:00:00').toLocaleDateString('en-US', {
-                                weekday: 'long',
-                                month: 'long',
-                                day: 'numeric',
-                                year: 'numeric',
-                              })}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {isAvailable && rp.start_time && rp.end_time
-                                ? `Custom hours: ${formatTime(rp.start_time)} - ${formatTime(rp.end_time)}${rp.slot_duration_minutes ? ` (${rp.slot_duration_minutes}m slots)` : ''}`
-                                : 'Unavailable'}
-                              {override.reason && ` -- ${override.reason}`}
-                            </p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteOverride(override.id)}
-                            className="text-muted-foreground hover:text-red-600"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                  {(() => {
+                    const visibleOverrides = overrides.filter((o) => {
+                      if (!selectedLocation) return true;
+                      const loc = getOverrideLocationId(o);
+                      return !loc || loc === selectedLocation;
+                    });
+                    if (visibleOverrides.length === 0) {
+                      return (
+                        <div className="text-center py-12">
+                          <CalendarOff className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                          <p className="text-muted-foreground mb-1">No date overrides {selectedLocation ? 'for this location' : 'set'}</p>
+                          <p className="text-sm text-muted-foreground">Use overrides to block days off or set custom hours for specific dates</p>
                         </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                      );
+                    }
+                    return (
+                      <div className="space-y-3">
+                        {visibleOverrides.map((override) => {
+                          const rp = override.recurrence_pattern || {};
+                          const isAvailable = rp.is_available !== false;
+                          const overrideDate = override.start_date || override.override_date;
+                          return (
+                            <div
+                              key={override.id}
+                              className={`flex items-center gap-4 p-4 rounded-lg border ${
+                                isAvailable
+                                  ? 'bg-sky-50/50 border-sky-100'
+                                  : 'bg-red-50/50 border-red-100'
+                              }`}
+                            >
+                              <div className={`p-2 rounded-lg ${isAvailable ? 'bg-sky-100' : 'bg-red-100'}`}>
+                                {isAvailable ? (
+                                  <Clock className="w-5 h-5 text-sky-600" />
+                                ) : (
+                                  <CalendarOff className="w-5 h-5 text-red-600" />
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <p className="font-medium text-foreground">
+                                  {overrideDate
+                                    ? new Date(overrideDate + 'T00:00:00').toLocaleDateString('en-US', {
+                                        weekday: 'long',
+                                        month: 'long',
+                                        day: 'numeric',
+                                        year: 'numeric',
+                                      })
+                                    : 'Invalid Date'}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {isAvailable && rp.start_time && rp.end_time
+                                    ? `Custom hours: ${formatTime(rp.start_time)} - ${formatTime(rp.end_time)}${rp.slot_duration_minutes ? ` (${rp.slot_duration_minutes}m slots)` : ''}`
+                                    : 'Unavailable'}
+                                  {override.reason && ` -- ${override.reason}`}
+                                </p>
+                                {getOverrideLocationId(override) && (
+                                  <p className="text-xs text-sky-600 mt-0.5">
+                                    {getLocationName(getOverrideLocationId(override) as string) || 'Specific location'}
+                                  </p>
+                                )}
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => openEditOverride(override)}
+                                className="text-muted-foreground hover:text-sky-600"
+                                title="Edit override"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleDeleteOverride(override.id)}
+                                className="text-muted-foreground hover:text-red-600"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
                 </div>
               </TabsContent>
             </Tabs>
@@ -672,10 +746,10 @@ export default function ProviderScheduleManagement() {
         onConfirm={executeDelete}
       />
 
-      <Dialog open={showOverrideModal} onOpenChange={setShowOverrideModal}>
+      <Dialog open={showOverrideModal} onOpenChange={(open) => { if (!open) closeOverrideModal(); else setShowOverrideModal(true); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Add Date Override</DialogTitle>
+            <DialogTitle>{editingOverrideId ? 'Edit Date Override' : 'Add Date Override'}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -684,10 +758,34 @@ export default function ProviderScheduleManagement() {
               <Input
                 type="date"
                 value={newOverride.override_date}
-                min={new Date().toISOString().split('T')[0]}
+                min={editingOverrideId ? undefined : new Date().toISOString().split('T')[0]}
                 onChange={(e) => setNewOverride({ ...newOverride, override_date: e.target.value })}
               />
             </div>
+
+            {locations.length > 0 && (
+              <div>
+                <Label className="mb-2 block">Location</Label>
+                <Select
+                  value={newOverride.location_id || 'all'}
+                  onValueChange={(value) =>
+                    setNewOverride({ ...newOverride, location_id: value === 'all' ? '' : value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="All locations" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All locations</SelectItem>
+                    {locations.map((loc) => (
+                      <SelectItem key={loc.id} value={loc.id}>
+                        {loc.location_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div>
               <Label className="mb-2 block">Availability</Label>
@@ -781,11 +879,11 @@ export default function ProviderScheduleManagement() {
                 disabled={!newOverride.override_date}
                 className="flex-1 bg-sky-600 hover:bg-sky-700"
               >
-                Add Override
+                {editingOverrideId ? 'Save Changes' : 'Add Override'}
               </Button>
               <Button
                 variant="outline"
-                onClick={() => setShowOverrideModal(false)}
+                onClick={closeOverrideModal}
               >
                 Cancel
               </Button>
