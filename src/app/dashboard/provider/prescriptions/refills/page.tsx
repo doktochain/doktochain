@@ -35,20 +35,24 @@ export default function RefillRequestsPage() {
       const provider = await providerService.getProviderByUserId(user.id);
       if (provider) {
         setProviderId(provider.id);
+      } else {
+        setProviderId(user.id);
       }
     } catch (error) {
       console.error('Error loading provider:', error);
+      setProviderId(user.id);
     }
   };
 
   const loadRefillRequests = async () => {
-    if (!providerId) return;
+    if (!user) return;
     setLoading(true);
     try {
-      const data = await prescriptionService.getProviderRefillRequests(providerId);
+      const data = await prescriptionService.getProviderRefillRequests(user.id);
       setRequests(data || []);
     } catch (error) {
       console.error('Error loading refill requests:', error);
+      toast.error('Unable to load refill requests. Please try again.');
     } finally {
       setLoading(false);
     }
