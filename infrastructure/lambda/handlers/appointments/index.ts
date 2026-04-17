@@ -192,6 +192,8 @@ router.put('/:id', async (event, params) => {
   const allowedFields = [
     'status', 'appointment_date', 'start_time', 'end_time',
     'reason_for_visit', 'chief_complaint', 'cancellation_reason',
+    'cancelled_at', 'cancellation_fee_assessed', 'rescheduled_from_id',
+    'check_in_time', 'check_out_time', 'notes', 'appointment_type',
   ];
 
   const updates: string[] = [];
