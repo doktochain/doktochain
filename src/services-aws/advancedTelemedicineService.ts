@@ -137,13 +137,40 @@ export const advancedTelemedicineService = {
   },
 
   async endSession(sessionId: string): Promise<TelemedicineSession> {
-    const { data, error } = await api.put<TelemedicineSession>(`/telemedicine-sessions/${sessionId}`, {
+    const endedAt = new Date();
+    const updates: Record<string, any> = {
       status: 'completed',
-      ended_at: new Date().toISOString(),
-    });
+      ended_at: endedAt.toISOString(),
+    };
+
+    try {
+      const existing = await this.getSession(sessionId);
+      if (existing?.started_at) {
+        const startedAt = new Date(existing.started_at);
+        const minutes = Math.max(
+          0,
+          Math.round((endedAt.getTime() - startedAt.getTime()) / 60000)
+        );
+        updates.duration_minutes = minutes;
+      }
+    } catch {}
+
+    const { data, error } = await api.put<TelemedicineSession>(
+      `/telemedicine-sessions/${sessionId}`,
+      updates
+    );
 
     if (error) throw error;
     return data!;
+  },
+
+  async getProviderSessions(providerId: string): Promise<TelemedicineSession[]> {
+    const { data, error } = await api.get<TelemedicineSession[]>('/telemedicine-sessions', {
+      params: { provider_id: providerId, order: 'created_at:desc', limit: 100 },
+    });
+
+    if (error) throw error;
+    return data || [];
   },
 
   async updateSessionSettings(
@@ -212,7 +239,7 @@ export const advancedTelemedicineService = {
 
   async getChatMessages(sessionId: string): Promise<SessionChatMessage[]> {
     const { data, error } = await api.get<SessionChatMessage[]>('/session-chat-messages', {
-      params: { session_id: sessionId, order: 'created_at.asc' }
+      params: { session_id: sessionId, order: 'created_at:asc' }
     });
 
     if (error) throw error;
@@ -242,7 +269,7 @@ export const advancedTelemedicineService = {
 
   async getSessionFiles(sessionId: string): Promise<SessionFile[]> {
     const { data, error } = await api.get<SessionFile[]>('/session-files', {
-      params: { session_id: sessionId, order: 'created_at.desc' }
+      params: { session_id: sessionId, order: 'created_at:desc' }
     });
 
     if (error) throw error;
@@ -362,7 +389,7 @@ export const advancedTelemedicineService = {
     providerId: string
   ): Promise<VirtualWaitingRoomEntry> {
     const { data: queueData } = await api.get<VirtualWaitingRoomEntry[]>('/virtual-waiting-room', {
-      params: { provider_id: providerId, status: 'waiting', order: 'queue_position.desc', limit: 1 }
+      params: { provider_id: providerId, status: 'waiting', order: 'queue_position:desc', limit: 1 }
     });
 
     const lastEntry = Array.isArray(queueData) ? queueData[0] : queueData;
@@ -382,7 +409,7 @@ export const advancedTelemedicineService = {
 
   async getWaitingRoom(providerId: string): Promise<VirtualWaitingRoomEntry[]> {
     const { data, error } = await api.get<VirtualWaitingRoomEntry[]>('/virtual-waiting-room', {
-      params: { provider_id: providerId, status: 'waiting', order: 'queue_position.asc' }
+      params: { provider_id: providerId, status: 'waiting', order: 'queue_position:asc' }
     });
 
     if (error) throw error;
