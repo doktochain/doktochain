@@ -101,7 +101,7 @@ export default function AuditTrailViewer({ resourceType, resourceId }: AuditTrai
           </div>
           <div>
             <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-              Blockchain Audit Trail
+              Cryptographic Audit Trail
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Immutable record of all actions
@@ -214,7 +214,7 @@ export default function AuditTrailViewer({ resourceType, resourceId }: AuditTrai
 
                 {entry.blockchain_transaction_id && (
                   <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
-                    Blockchain TX: {entry.blockchain_transaction_id}
+                    Ledger TX: {entry.blockchain_transaction_id}
                   </div>
                 )}
               </div>
@@ -231,7 +231,7 @@ export default function AuditTrailViewer({ resourceType, resourceId }: AuditTrai
         <div className="flex items-start gap-3">
           <Shield className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
           <div className="text-sm text-blue-900 dark:text-blue-100">
-            <p className="font-semibold mb-1">Blockchain Security</p>
+            <p className="font-semibold mb-1">Cryptographic Security</p>
             <p>
               All actions are hashed with SHA-256 and linked in an immutable chain. Each entry
               references the previous hash, making tampering mathematically detectable.
