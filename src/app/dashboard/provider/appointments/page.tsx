@@ -417,6 +417,14 @@ export default function ProviderAppointmentsPage() {
             setShowConfirmModal(false);
             setSelectedAppointment(null);
           }}
+          onCancel={() => {
+            setShowConfirmModal(false);
+            setShowCancelModal(true);
+          }}
+          onReschedule={() => {
+            setShowConfirmModal(false);
+            setShowRescheduleModal(true);
+          }}
         />
       )}
 
