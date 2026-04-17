@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Users, Search, FileText, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../../../contexts/AuthContext';
-import { supabase } from '../../../../lib/supabase';
+import { api } from '../../../../lib/api-client';
+import { providerService } from '../../../../services/providerService';
+import { patientService } from '../../../../services/patientService';
 import PatientChartViewer from '../../../../components/provider/PatientChartViewer';
 import ConsentStatusBadge from '../../../../components/ui/ConsentStatusBadge';
 import { Card, CardContent } from '../../../../components/ui/card';
@@ -40,30 +42,24 @@ export default function PatientChartsPage() {
   }, [user]);
 
   const loadPatients = async () => {
+    if (!user) return;
     try {
       setLoading(true);
 
-      const { data: providerData } = await supabase
-        .from('providers')
-        .select('id')
-        .eq('user_id', user?.id)
-        .maybeSingle();
-
+      const providerData = await providerService.getProviderByUserId(user.id);
       if (!providerData) {
         setLoading(false);
         return;
       }
 
       try {
-        const { data: consents } = await supabase
-          .from('patient_consents')
-          .select('patient_id, status, end_date')
-          .eq('provider_id', providerData.id)
-          .in('status', ['active', 'revoked', 'expired']);
-
+        const { data: consents } = await api.get<any[]>('/patient-consents', {
+          params: { provider_id: providerData.id, limit: 500 },
+        });
         if (consents) {
           const map: Record<string, { status: string; end_date: string | null }> = {};
           consents.forEach((c: any) => {
+            if (!['active', 'revoked', 'expired'].includes(c.status)) return;
             const existing = map[c.patient_id];
             if (!existing || c.status === 'active') {
               const now = new Date();
@@ -78,51 +74,45 @@ export default function PatientChartsPage() {
         }
       } catch {}
 
-      const { data: appointmentsData } = await supabase
-        .from('appointments')
-        .select(`
-          patient_id,
-          appointment_date,
-          patients!inner (
-            id,
-            user_id,
-            medical_record_number,
-            user_profiles!inner (
-              first_name,
-              last_name,
-              email,
-              phone,
-              date_of_birth,
-              gender
-            )
-          )
-        `)
-        .eq('provider_id', providerData.id)
-        .order('appointment_date', { ascending: false });
+      const { data: appointmentsData } = await api.get<any[]>('/appointments', {
+        params: {
+          provider_id: providerData.id,
+          include: 'patients,user_profiles',
+          order: 'appointment_date:desc',
+          limit: 500,
+        },
+      });
 
       if (appointmentsData) {
         const patientMap = new Map<string, PatientData>();
 
         appointmentsData.forEach((apt: any) => {
-          const patient = apt.patients;
-          if (patient && patient.user_profiles) {
-            const patientId = patient.id;
+          const patient = apt.patients || apt.patient;
+          const profile = patient?.user_profiles || apt.user_profiles || {
+            first_name: apt.first_name,
+            last_name: apt.last_name,
+            email: apt.email,
+            phone: apt.phone,
+            date_of_birth: apt.date_of_birth,
+            gender: apt.gender,
+          };
+          const patientId = patient?.id || apt.patient_id;
+          if (!patientId || !profile?.first_name) return;
 
-            if (!patientMap.has(patientId)) {
-              patientMap.set(patientId, {
-                id: patient.id,
-                user_id: patient.user_id,
-                medical_record_number: patient.medical_record_number,
-                user_profiles: patient.user_profiles,
-                total_appointments: 1,
-                last_visit: apt.appointment_date,
-              });
-            } else {
-              const existing = patientMap.get(patientId)!;
-              existing.total_appointments += 1;
-              if (new Date(apt.appointment_date) > new Date(existing.last_visit)) {
-                existing.last_visit = apt.appointment_date;
-              }
+          if (!patientMap.has(patientId)) {
+            patientMap.set(patientId, {
+              id: patientId,
+              user_id: patient?.user_id || '',
+              medical_record_number: patient?.medical_record_number || '',
+              user_profiles: profile,
+              total_appointments: 1,
+              last_visit: apt.appointment_date,
+            });
+          } else {
+            const existing = patientMap.get(patientId)!;
+            existing.total_appointments += 1;
+            if (new Date(apt.appointment_date) > new Date(existing.last_visit)) {
+              existing.last_visit = apt.appointment_date;
             }
           }
         });
@@ -136,13 +126,62 @@ export default function PatientChartsPage() {
     }
   };
 
-  const filteredPatients = patients.filter((patient) => {
-    const fullName = `${patient.user_profiles.first_name} ${patient.user_profiles.last_name}`.toLowerCase();
-    const mrn = patient.medical_record_number?.toLowerCase() || '';
-    const search = searchTerm.toLowerCase();
+  const [searchResults, setSearchResults] = useState<PatientData[]>([]);
+  const [searching, setSearching] = useState(false);
 
-    return fullName.includes(search) || mrn.includes(search);
-  });
+  useEffect(() => {
+    const term = searchTerm.trim();
+    if (term.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        setSearching(true);
+        const results = await patientService.searchPatients(term, 20);
+        const formatted: PatientData[] = results.map((p: any) => ({
+          id: p.id,
+          user_id: p.user_id,
+          medical_record_number: p.medical_record_number || '',
+          user_profiles: {
+            first_name: p.first_name || p.user_profiles?.first_name || '',
+            last_name: p.last_name || p.user_profiles?.last_name || '',
+            email: p.email || p.user_profiles?.email || '',
+            phone: p.phone || p.user_profiles?.phone || '',
+            date_of_birth: p.date_of_birth || p.user_profiles?.date_of_birth || '',
+            gender: p.gender || p.user_profiles?.gender || '',
+          },
+          total_appointments: 0,
+          last_visit: '',
+        }));
+        setSearchResults(formatted);
+      } catch (err) {
+        console.warn('Patient search failed', err);
+      } finally {
+        setSearching(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  const filteredPatients = searchTerm.trim().length >= 2
+    ? (() => {
+        const seen = new Set<string>();
+        const combined: PatientData[] = [];
+        for (const p of patients) {
+          const fullName = `${p.user_profiles.first_name} ${p.user_profiles.last_name}`.toLowerCase();
+          const mrn = p.medical_record_number?.toLowerCase() || '';
+          if (fullName.includes(searchTerm.toLowerCase()) || mrn.includes(searchTerm.toLowerCase())) {
+            combined.push(p);
+            seen.add(p.id);
+          }
+        }
+        for (const p of searchResults) {
+          if (!seen.has(p.id)) combined.push(p);
+        }
+        return combined;
+      })()
+    : patients;
 
   if (selectedPatientId) {
     const selectedPatient = patients.find((p) => p.id === selectedPatientId);
@@ -197,9 +236,12 @@ export default function PatientChartsPage() {
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search patients by name or MRN..."
+                placeholder="Search patients by name, email, MRN, health card, or DOB..."
                 className="pl-10 py-3 h-12"
               />
+              {searching && (
+                <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-muted-foreground">Searching...</span>
+              )}
             </div>
           </div>
 
