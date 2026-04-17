@@ -334,6 +334,20 @@ publicRouter.get('/providers', async (event) => {
   return success(result, origin);
 });
 
+publicRouter.get('/provider-types', async (event) => {
+  const origin = getOrigin(event.headers);
+  const types = [
+    { value: 'doctor', label: 'Doctor (MD)' },
+    { value: 'dentist', label: 'Dentist' },
+    { value: 'specialist', label: 'Specialist' },
+    { value: 'nurse', label: 'Nurse Practitioner' },
+    { value: 'therapist', label: 'Therapist' },
+    { value: 'pharmacist', label: 'Pharmacist' },
+    { value: 'other', label: 'Other' },
+  ];
+  return success(types, origin);
+});
+
 publicRouter.get('/insurance-providers', async (event) => {
   const origin = getOrigin(event.headers);
   const result = await withRLS('anonymous', 'anon', {}, async (client) => {
