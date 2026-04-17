@@ -312,6 +312,19 @@ export const notificationService = {
     }
   },
 
+  async deleteNotification(notificationId: string): Promise<{
+    data: boolean;
+    error: Error | null;
+  }> {
+    try {
+      const { error } = await api.delete(`/notifications/${notificationId}`);
+      if (error) throw error;
+      return { data: true, error: null };
+    } catch (error) {
+      return { data: false, error: error as Error };
+    }
+  },
+
   async getPreferences(userId: string): Promise<{
     data: NotificationPreference[] | null;
     error: Error | null;
