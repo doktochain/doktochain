@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api-client';
+import { providerService } from '../../services/providerService';
 import { consentService } from '../../services/consentService';
 import { fhirGatewayService, CrossProviderRecord, PatientCompleteRecord } from '../../services/fhirGatewayService';
 import { auditTrailService } from '../../services/auditTrailService';
@@ -49,11 +50,7 @@ export default function PatientChartViewer({ patientId, onClose }: PatientChartV
 
     setLoading(true);
     try {
-      const { data: provider } = await supabase
-        .from('providers')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      const provider = await providerService.getProviderByUserId(user.id);
 
       if (provider) {
         setProviderId(provider.id);
@@ -85,22 +82,33 @@ export default function PatientChartViewer({ patientId, onClose }: PatientChartV
   };
 
   const loadPatientDemographics = async () => {
-    const { data: patientRow } = await supabase
-      .from('patients')
-      .select('*, user_profiles(first_name, last_name, email, phone, date_of_birth, gender)')
-      .eq('id', patientId)
-      .maybeSingle();
-
-    if (patientRow) {
-      const profile = patientRow.user_profiles as any;
-      setPatientInfo({
-        ...patientRow,
-        full_name: profile ? `${profile.first_name} ${profile.last_name}` : 'N/A',
-        date_of_birth: profile?.date_of_birth || patientRow.date_of_birth,
-        gender: profile?.gender,
-        email: profile?.email,
-        phone: profile?.phone,
+    try {
+      const { data: patientRow } = await api.get<any>(`/patients/${patientId}`, {
+        params: { include: 'user_profiles' },
       });
+
+      if (patientRow) {
+        const profile = patientRow.user_profiles || {
+          first_name: patientRow.first_name,
+          last_name: patientRow.last_name,
+          email: patientRow.email,
+          phone: patientRow.phone,
+          date_of_birth: patientRow.date_of_birth,
+          gender: patientRow.gender,
+        };
+        setPatientInfo({
+          ...patientRow,
+          full_name: profile?.first_name
+            ? `${profile.first_name} ${profile.last_name || ''}`.trim()
+            : 'N/A',
+          date_of_birth: profile?.date_of_birth || patientRow.date_of_birth,
+          gender: profile?.gender,
+          email: profile?.email,
+          phone: profile?.phone,
+        });
+      }
+    } catch (err) {
+      console.warn('Failed to load patient demographics', err);
     }
   };
 
