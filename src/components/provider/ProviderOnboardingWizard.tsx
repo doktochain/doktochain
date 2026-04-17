@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { providerOnboardingService } from '../../services/providerOnboardingService';
-import { supabase } from '../../lib/supabase';
+import { api } from '../../lib/api-client';
 import {
   Stethoscope, Shield, Building2, FileCheck, CheckCircle,
   Upload, X, AlertCircle, Clock
@@ -37,12 +37,13 @@ const PROVINCES = [
   { value: 'NU', label: 'Nunavut' },
 ];
 
-const PROVIDER_TYPES = [
+const FALLBACK_PROVIDER_TYPES = [
   { value: 'doctor', label: 'Doctor (MD)' },
   { value: 'dentist', label: 'Dentist' },
   { value: 'specialist', label: 'Specialist' },
   { value: 'nurse', label: 'Nurse Practitioner' },
   { value: 'therapist', label: 'Therapist' },
+  { value: 'pharmacist', label: 'Pharmacist' },
   { value: 'other', label: 'Other' },
 ];
 
@@ -59,6 +60,7 @@ export default function ProviderOnboardingWizard({ onComplete, existingApplicati
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [specialties, setSpecialties] = useState<any[]>([]);
+  const [providerTypes, setProviderTypes] = useState<{ value: string; label: string }[]>(FALLBACK_PROVIDER_TYPES);
   const [uploadedDocs, setUploadedDocs] = useState<any[]>([]);
 
   const [professionalInfo, setProfessionalInfo] = useState({
@@ -90,19 +92,29 @@ export default function ProviderOnboardingWizard({ onComplete, existingApplicati
   });
 
   useEffect(() => {
+    loadProviderTypes();
     loadSpecialties();
     if (applicationId) {
       loadDocuments();
     }
   }, []);
 
+  const loadProviderTypes = async () => {
+    try {
+      const { data } = await api.get<{ value: string; label: string }[]>('/public/provider-types');
+      if (data && data.length > 0) setProviderTypes(data);
+    } catch {
+      // keep fallback
+    }
+  };
+
   const loadSpecialties = async () => {
-    const { data } = await supabase
-      .from('specialties_master')
-      .select('*')
-      .eq('is_active', true)
-      .order('name', { ascending: true });
-    setSpecialties(data || []);
+    try {
+      const { data } = await api.get<any[]>('/public/specialties');
+      setSpecialties(data || []);
+    } catch {
+      setSpecialties([]);
+    }
   };
 
   const loadDocuments = async () => {
@@ -306,6 +318,7 @@ export default function ProviderOnboardingWizard({ onComplete, existingApplicati
               data={professionalInfo}
               onChange={setProfessionalInfo}
               specialties={specialties}
+              providerTypes={providerTypes}
               inputClass={inputClass}
               labelClass={labelClass}
               loading={loading}
@@ -348,6 +361,7 @@ export default function ProviderOnboardingWizard({ onComplete, existingApplicati
               practiceInfo={practiceInfo}
               uploadedDocs={uploadedDocs}
               specialties={specialties}
+              providerTypes={providerTypes}
               loading={loading}
               onBack={() => setCurrentStep('practice')}
               onSubmit={handleSubmitApplication}
@@ -359,7 +373,7 @@ export default function ProviderOnboardingWizard({ onComplete, existingApplicati
   );
 }
 
-function ProfessionalInfoStep({ data, onChange, specialties, inputClass, labelClass, loading, onNext }: any) {
+function ProfessionalInfoStep({ data, onChange, specialties, providerTypes, inputClass, labelClass, loading, onNext }: any) {
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-gray-900">Professional Information</h3>
@@ -372,7 +386,7 @@ function ProfessionalInfoStep({ data, onChange, specialties, inputClass, labelCl
           className={inputClass}
         >
           <option value="">Select type</option>
-          {PROVIDER_TYPES.map(t => (
+          {providerTypes.map((t: any) => (
             <option key={t.value} value={t.value}>{t.label}</option>
           ))}
         </select>
@@ -699,9 +713,9 @@ function PracticeDetailsStep({ data, onChange, languages, toggleLanguage, inputC
   );
 }
 
-function ReviewStep({ professionalInfo, licenseInfo, practiceInfo, uploadedDocs, specialties, loading, onBack, onSubmit }: any) {
+function ReviewStep({ professionalInfo, licenseInfo, practiceInfo, uploadedDocs, specialties, providerTypes, loading, onBack, onSubmit }: any) {
   const specialtyName = specialties.find((s: any) => s.name === professionalInfo.specialty)?.name || professionalInfo.specialty;
-  const providerTypeLabel = PROVIDER_TYPES.find(t => t.value === professionalInfo.provider_type)?.label || professionalInfo.provider_type;
+  const providerTypeLabel = (providerTypes || FALLBACK_PROVIDER_TYPES).find((t: any) => t.value === professionalInfo.provider_type)?.label || professionalInfo.provider_type;
   const provinceLabel = PROVINCES.find(p => p.value === licenseInfo.license_province)?.label || licenseInfo.license_province;
 
   return (
