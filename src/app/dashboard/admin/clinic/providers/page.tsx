@@ -8,7 +8,7 @@ import AdminDetailView from '../../../../../components/admin/AdminDetailView';
 import AdminStatusBadge from '../../../../../components/admin/AdminStatusBadge';
 import { TableColumn, TableAction } from '../../../../../components/admin/AdminDataTable';
 import { BulkAction } from '../../../../../components/admin/AdminBulkActions';
-import { supabase } from '../../../../../lib/supabase';
+import { api } from '../../../../../lib/api-client';
 import { adminCRUDService } from '../../../../../services/adminCRUDService';
 
 const PROVINCES = [
@@ -51,15 +51,9 @@ export default function AdminProvidersPage() {
   const loadProviders = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('providers')
-        .select(`
-          *,
-          user_profiles!providers_user_id_fkey(email, phone, first_name, last_name)
-        `)
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false });
-
+      const { data, error } = await api.get<any[]>('/providers/admin/all', {
+        params: { limit: 200 },
+      });
       if (error) throw error;
       setProviders(data || []);
     } catch (error) {
@@ -71,12 +65,9 @@ export default function AdminProvidersPage() {
 
   const loadProviderAppointments = async (providerId: string) => {
     try {
-      const { data } = await supabase
-        .from('appointments')
-        .select('id, appointment_date, appointment_time, status, appointment_type, user_profiles!appointments_patient_id_fkey(first_name, last_name)')
-        .eq('provider_id', providerId)
-        .order('appointment_date', { ascending: false })
-        .limit(10);
+      const { data } = await api.get<any[]>('/appointments', {
+        params: { provider_id: providerId, order: 'appointment_date:desc', limit: 10 },
+      });
       setProviderAppointments(data || []);
     } catch {
       setProviderAppointments([]);
@@ -117,10 +108,10 @@ export default function AdminProvidersPage() {
 
   const handleVerifyProvider = async (providerId: string) => {
     try {
-      await supabase
-        .from('providers')
-        .update({ is_verified: true, verification_date: new Date().toISOString() })
-        .eq('id', providerId);
+      await api.put(`/providers/${providerId}`, {
+        is_verified: true,
+        verification_date: new Date().toISOString(),
+      });
       loadProviders();
     } catch (error) {
       console.error('Error verifying provider:', error);
