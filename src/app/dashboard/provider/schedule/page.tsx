@@ -235,7 +235,9 @@ export default function ProviderScheduleManagement() {
         </div>
         <Button
           onClick={() => setShowAddModal(true)}
+          disabled={locations.length === 0}
           className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700"
+          title={locations.length === 0 ? 'Add a location first' : ''}
         >
           <Plus className="w-4 h-4" />
           Add Time Slot
@@ -247,7 +249,7 @@ export default function ProviderScheduleManagement() {
           <MapPin className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
           <p className="text-muted-foreground mb-4">You need to add a location before setting your schedule</p>
           <Button
-            onClick={() => window.location.href = '/dashboard/provider/locations'}
+            onClick={() => window.location.href = `/${document.documentElement.lang || 'en'}/dashboard/provider/locations`}
             className="bg-sky-600 hover:bg-sky-700"
           >
             Add Location
