@@ -101,7 +101,6 @@ export const providerMenu: MenuItem[] = [
       { label: 'provider.templates', href: '/dashboard/provider/templates' },
     ],
   },
-  { label: 'provider.patientHealthRecords', icon: FileText, href: '/dashboard/provider/patients' },
   {
     label: 'provider.prescriptions',
     icon: ClipboardList,
