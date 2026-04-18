@@ -5,6 +5,8 @@ import { providerOnboardingService, ProviderOnboardingApplication } from '../../
 import { supabase } from '../../lib/supabase';
 import TermsCheckbox, { CURRENT_TERMS_VERSION, CURRENT_PRIVACY_VERSION } from './TermsCheckbox';
 import { User, Car as IdCard, Briefcase, Upload, CheckCircle } from 'lucide-react';
+import AddressAutocomplete, { ParsedAddress } from '../ui/AddressAutocomplete';
+import { provinceNameToCode } from '../../lib/address-utils';
 
 const PROVINCES = [
   { code: 'AB', name: 'Alberta' },
@@ -372,6 +374,23 @@ export default function ProviderRegistration() {
           onChange={(e) => handleInputChange('practice_name', e.target.value)}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
         />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Search Practice Address</label>
+        <AddressAutocomplete
+          placeholder="Start typing to search address..."
+          onSelect={(addr: ParsedAddress) => {
+            setFormData((prev: any) => ({
+              ...prev,
+              practice_address_line1: addr.addressLine1 || prev.practice_address_line1,
+              practice_city: addr.city || prev.practice_city,
+              practice_province: provinceNameToCode(addr.province) || prev.practice_province,
+              practice_postal_code: addr.postalCode || prev.practice_postal_code,
+            }));
+          }}
+        />
+        <p className="text-xs text-gray-500 mt-1">Pick a suggestion to auto-fill the fields below.</p>
       </div>
 
       <div>
