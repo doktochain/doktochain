@@ -393,6 +393,22 @@ export const providerProfileService = {
     return data || [];
   },
 
+  async getAllCredentials(options: { is_verified?: boolean; limit?: number } = {}): Promise<ProviderCredential[]> {
+    const params: Record<string, any> = {
+      order_by: 'created_at:desc',
+      include: 'providers(id,user_id,specialty,license_number,user_profiles(first_name,last_name,email))',
+    };
+    if (typeof options.is_verified === 'boolean') params.is_verified = options.is_verified;
+    if (options.limit) params.limit = options.limit;
+
+    const { data, error } = await api.get<ProviderCredential[]>('/provider-credentials', { params });
+    if (error) {
+      console.warn('[providerProfileService.getAllCredentials] failed', error);
+      return [];
+    }
+    return Array.isArray(data) ? data : [];
+  },
+
   async addCredential(providerId: string, credential: {
     credential_type: string;
     credential_name: string;
