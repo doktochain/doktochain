@@ -230,7 +230,10 @@ export default function SessionHistoryPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <button className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
+                    <button
+                      onClick={() => setSelectedSession(session)}
+                      className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                    >
                       View Details
                     </button>
                   </td>
@@ -238,6 +241,102 @@ export default function SessionHistoryPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {selectedSession && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedSession(null)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Session Details</h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400">ID: {selectedSession.id}</p>
+              </div>
+              <button
+                onClick={() => setSelectedSession(null)}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                <XCircle className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">Patient</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    {(selectedSession as any).patients?.user_profiles?.full_name || 'Unknown Patient'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">Status</p>
+                  <div>{getStatusBadge(selectedSession.status)}</div>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">Started</p>
+                  <p className="text-sm text-gray-900 dark:text-white">
+                    {selectedSession.started_at
+                      ? new Date(selectedSession.started_at).toLocaleString()
+                      : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">Ended</p>
+                  <p className="text-sm text-gray-900 dark:text-white">
+                    {(selectedSession as any).ended_at
+                      ? new Date((selectedSession as any).ended_at).toLocaleString()
+                      : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">Duration</p>
+                  <p className="text-sm text-gray-900 dark:text-white">
+                    {selectedSession.duration_minutes ? `${selectedSession.duration_minutes} min` : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 uppercase">Connection Quality</p>
+                  <p className="text-sm text-gray-900 dark:text-white">
+                    {(selectedSession as any).connection_quality || '—'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <p className="text-xs text-gray-500 uppercase mb-2">Features Used</p>
+                <div className="flex flex-wrap gap-2">
+                  {selectedSession.recording_enabled && (
+                    <span className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">Recorded</span>
+                  )}
+                  {selectedSession.screen_sharing_used && (
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">Screen Share</span>
+                  )}
+                  {selectedSession.ai_notes_generated && (
+                    <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">AI Notes</span>
+                  )}
+                  {!selectedSession.recording_enabled &&
+                    !selectedSession.screen_sharing_used &&
+                    !selectedSession.ai_notes_generated && (
+                      <span className="text-sm text-gray-500">No special features used.</span>
+                    )}
+                </div>
+              </div>
+
+              {(selectedSession as any).notes && (
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <p className="text-xs text-gray-500 uppercase mb-2">Notes</p>
+                  <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">
+                    {(selectedSession as any).notes}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
