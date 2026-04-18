@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { Clock, Plus, X, CalendarOff, Save } from 'lucide-react';
-import { providerProfileService, type TimeBlock } from '../../services/providerProfileService';
+import { Clock, Plus, X, CalendarOff, MapPin } from 'lucide-react';
+import { providerService, ProviderLocation, ProviderSchedule } from '../../services/providerService';
+import { api } from '../../lib/api-client';
 
 interface AvailabilityManagerProps {
   providerId: string;
@@ -24,20 +25,22 @@ const TIME_SLOTS = Array.from({ length: 48 }, (_, i) => {
 });
 
 export default function AvailabilityManager({ providerId }: AvailabilityManagerProps) {
-  const [timeBlocks, setTimeBlocks] = useState<any[]>([]);
-  const [unavailability, setUnavailability] = useState<any[]>([]);
+  const [schedules, setSchedules] = useState<ProviderSchedule[]>([]);
+  const [locations, setLocations] = useState<ProviderLocation[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<string>('');
+  const [overrides, setOverrides] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('schedule');
 
-  const [newBlock, setNewBlock] = useState<TimeBlock>({
+  const [newBlock, setNewBlock] = useState({
     day_of_week: 1,
     start_time: '09:00',
     end_time: '17:00',
-    block_type: 'available',
-    appointment_type: 'both',
+    slot_duration_minutes: 30,
+    appointment_type: 'both' as 'both' | 'in-person' | 'virtual',
   });
 
-  const [newUnavailability, setNewUnavailability] = useState({
+  const [newOverride, setNewOverride] = useState({
     start_date: '',
     end_date: '',
     reason: '',
@@ -51,12 +54,31 @@ export default function AvailabilityManager({ providerId }: AvailabilityManagerP
   const loadData = async () => {
     setLoading(true);
     try {
-      const [blocks, unavail] = await Promise.all([
-        providerProfileService.getTimeBlocks(providerId),
-        providerProfileService.getUnavailability(providerId),
+      const [locs, sched] = await Promise.all([
+        providerService.getLocations(providerId).catch(() => []),
+        providerService.getSchedule(providerId).catch(() => []),
       ]);
-      setTimeBlocks(blocks);
-      setUnavailability(unavail);
+
+      setLocations(locs);
+      setSchedules(sched);
+
+      if (locs.length > 0 && !selectedLocation) {
+        setSelectedLocation(locs[0].id);
+      }
+
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const { data: overridesData } = await api.get<any[]>('/provider-unavailability', {
+          params: {
+            provider_id: providerId,
+            end_date_gte: today,
+            order: 'start_date:asc',
+          },
+        });
+        setOverrides(overridesData || []);
+      } catch {
+        setOverrides([]);
+      }
     } catch (error) {
       console.error('Error loading availability:', error);
     } finally {
@@ -65,103 +87,126 @@ export default function AvailabilityManager({ providerId }: AvailabilityManagerP
   };
 
   const handleAddBlock = async () => {
+    if (!selectedLocation) {
+      toast.error('Please add and select a practice location first');
+      return;
+    }
+    if (newBlock.end_time <= newBlock.start_time) {
+      toast.error('End time must be after start time');
+      return;
+    }
+
     try {
-      await providerProfileService.addTimeBlock(providerId, newBlock);
+      await providerService.addSchedule({
+        provider_id: providerId,
+        location_id: selectedLocation,
+        day_of_week: newBlock.day_of_week,
+        start_time: newBlock.start_time,
+        end_time: newBlock.end_time,
+        slot_duration_minutes: newBlock.slot_duration_minutes,
+        appointment_type: newBlock.appointment_type,
+        is_available: true,
+      } as any);
       setNewBlock({
         day_of_week: 1,
         start_time: '09:00',
         end_time: '17:00',
-        block_type: 'available',
+        slot_duration_minutes: 30,
         appointment_type: 'both',
       });
+      toast.success('Time slot added');
       await loadData();
     } catch (error: any) {
       console.error('Error adding time block:', error);
-      toast.error(`Failed to add time block: ${error.message}`);
+      toast.error(`Failed to add time slot: ${error.message || 'Unknown error'}`);
     }
   };
 
   const handleRemoveBlock = async (blockId: string) => {
     try {
-      await providerProfileService.deleteTimeBlock(blockId);
+      await providerService.deleteSchedule(blockId);
+      toast.success('Time slot removed');
       loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error removing time block:', error);
+      toast.error(error?.message || 'Failed to remove time slot');
     }
   };
 
-  const handleAddUnavailability = async () => {
-    if (!newUnavailability.start_date || !newUnavailability.end_date) {
+  const handleAddOverride = async () => {
+    if (!newOverride.start_date || !newOverride.end_date) {
       toast.error('Please select both start and end dates');
       return;
     }
 
     try {
-      await providerProfileService.addUnavailability(providerId, newUnavailability);
-      setNewUnavailability({
+      const { error } = await api.post('/provider-unavailability', {
+        provider_id: providerId,
+        start_date: newOverride.start_date,
+        end_date: newOverride.end_date,
+        reason: newOverride.reason || 'Unavailable',
+        is_recurring: newOverride.is_recurring,
+        recurrence_pattern: { is_available: false },
+      });
+      if (error) throw error;
+
+      setNewOverride({
         start_date: '',
         end_date: '',
         reason: '',
         is_recurring: false,
       });
+      toast.success('Time off added');
       await loadData();
     } catch (error: any) {
-      console.error('Error adding unavailability:', error);
-      toast.error(`Failed to add time off: ${error.message}`);
+      console.error('Error adding time off:', error);
+      toast.error(`Failed to add time off: ${error.message || 'Unknown error'}`);
     }
   };
 
-  const handleRemoveUnavailability = async (id: string) => {
+  const handleRemoveOverride = async (id: string) => {
     try {
-      await providerProfileService.deleteUnavailability(id);
+      const { error } = await api.delete(`/provider-unavailability/${id}`);
+      if (error) throw error;
+      toast.success('Time off removed');
       loadData();
-    } catch (error) {
-      console.error('Error removing unavailability:', error);
+    } catch (error: any) {
+      console.error('Error removing time off:', error);
+      toast.error(error?.message || 'Failed to remove time off');
     }
   };
 
-  const handleQuickSetup = (preset: 'weekdays' | 'allDays' | 'custom') => {
-    const blocks: TimeBlock[] = [];
-
-    if (preset === 'weekdays') {
+  const handleQuickSetup = async () => {
+    if (!selectedLocation) {
+      toast.error('Please add and select a practice location first');
+      return;
+    }
+    try {
       for (let day = 1; day <= 5; day++) {
-        blocks.push({
+        await providerService.addSchedule({
+          provider_id: providerId,
+          location_id: selectedLocation,
           day_of_week: day,
           start_time: '09:00',
           end_time: '17:00',
-          block_type: 'available',
+          slot_duration_minutes: 30,
           appointment_type: 'both',
-        });
-        blocks.push({
-          day_of_week: day,
-          start_time: '12:00',
-          end_time: '13:00',
-          block_type: 'break',
-          appointment_type: 'both',
-        });
+          is_available: true,
+        } as any);
       }
-    } else if (preset === 'allDays') {
-      for (let day = 0; day <= 6; day++) {
-        blocks.push({
-          day_of_week: day,
-          start_time: '08:00',
-          end_time: '18:00',
-          block_type: 'available',
-          appointment_type: 'both',
-        });
-      }
+      toast.success('Weekdays 9-5 applied');
+      loadData();
+    } catch (error: any) {
+      console.error('Error in quick setup:', error);
+      toast.error(error?.message || 'Failed to apply quick setup');
     }
-
-    blocks.forEach((block) => {
-      providerProfileService.addTimeBlock(providerId, block);
-    });
-
-    setTimeout(() => loadData(), 1000);
   };
 
   const groupedBlocks = DAYS_OF_WEEK.map((day) => ({
     ...day,
-    blocks: timeBlocks.filter((b) => b.day_of_week === day.id).sort((a, b) => a.start_time.localeCompare(b.start_time)),
+    blocks: schedules
+      .filter((b) => b.day_of_week === day.id && (!selectedLocation || b.location_id === selectedLocation))
+      .sort((a, b) => a.start_time.localeCompare(b.start_time)),
   }));
 
   if (loading) {
@@ -177,12 +222,38 @@ export default function AvailabilityManager({ providerId }: AvailabilityManagerP
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Availability & Schedule</h2>
         <button
-          onClick={() => handleQuickSetup('weekdays')}
+          onClick={handleQuickSetup}
           className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm font-medium transition"
         >
           Quick Setup: Weekdays 9-5
         </button>
       </div>
+
+      {locations.length === 0 ? (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center">
+          <MapPin className="w-8 h-8 mx-auto text-amber-600 mb-2" />
+          <p className="text-amber-800 font-medium">No practice locations yet</p>
+          <p className="text-sm text-amber-700 mt-1">
+            Add a clinic location under Profile & Settings → Clinic Locations before setting your schedule.
+          </p>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-lg p-3">
+          <MapPin className="w-4 h-4 text-sky-600" />
+          <label className="text-sm font-medium text-gray-700">Location:</label>
+          <select
+            value={selectedLocation}
+            onChange={(e) => setSelectedLocation(e.target.value)}
+            className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+          >
+            {locations.map((loc) => (
+              <option key={loc.id} value={loc.id}>
+                {loc.location_name} {loc.is_primary ? '(Primary)' : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="border-b border-gray-200">
@@ -229,24 +300,21 @@ export default function AvailabilityManager({ providerId }: AvailabilityManagerP
                       {day.blocks.length === 0 ? (
                         <p className="text-xs text-gray-400">Unavailable</p>
                       ) : (
-                        day.blocks.map((block) => (
+                        day.blocks.map((block: any) => (
                           <div
                             key={block.id}
-                            className={`p-2 rounded text-xs ${
-                              block.block_type === 'available'
-                                ? 'bg-green-50 border border-green-200'
-                                : block.block_type === 'break'
-                                ? 'bg-yellow-50 border border-yellow-200'
-                                : 'bg-gray-50 border border-gray-200'
-                            }`}
+                            className="p-2 rounded text-xs bg-green-50 border border-green-200"
                           >
                             <div className="flex items-center justify-between">
                               <div>
                                 <div className="font-medium">
                                   {block.start_time?.substring(0, 5)} - {block.end_time?.substring(0, 5)}
                                 </div>
-                                <div className="text-gray-500 capitalize">
-                                  {block.block_type}
+                                <div className="text-gray-500">
+                                  {block.slot_duration_minutes}m slots
+                                  {block.appointment_type && block.appointment_type !== 'both' && (
+                                    <span className="ml-1">• {block.appointment_type}</span>
+                                  )}
                                 </div>
                               </div>
                               <button
@@ -290,9 +358,7 @@ export default function AvailabilityManager({ providerId }: AvailabilityManagerP
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                     >
                       {TIME_SLOTS.map((time) => (
-                        <option key={time} value={time}>
-                          {time}
-                        </option>
+                        <option key={time} value={time}>{time}</option>
                       ))}
                     </select>
                   </div>
@@ -305,30 +371,28 @@ export default function AvailabilityManager({ providerId }: AvailabilityManagerP
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                     >
                       {TIME_SLOTS.map((time) => (
-                        <option key={time} value={time}>
-                          {time}
-                        </option>
+                        <option key={time} value={time}>{time}</option>
                       ))}
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Slot</label>
                     <select
-                      value={newBlock.block_type}
-                      onChange={(e) => setNewBlock({ ...newBlock, block_type: e.target.value as any })}
+                      value={newBlock.slot_duration_minutes}
+                      onChange={(e) => setNewBlock({ ...newBlock, slot_duration_minutes: parseInt(e.target.value) })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
                     >
-                      <option value="available">Available</option>
-                      <option value="break">Break</option>
-                      <option value="administrative">Admin</option>
+                      <option value={15}>15m</option>
+                      <option value={20}>20m</option>
+                      <option value={30}>30m</option>
+                      <option value={45}>45m</option>
+                      <option value={60}>60m</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Visit Type
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Visit Type</label>
                     <select
                       value={newBlock.appointment_type}
                       onChange={(e) => setNewBlock({ ...newBlock, appointment_type: e.target.value as any })}
@@ -343,13 +407,17 @@ export default function AvailabilityManager({ providerId }: AvailabilityManagerP
                   <div className="flex items-end">
                     <button
                       onClick={handleAddBlock}
-                      className="w-full px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 flex items-center justify-center gap-2 font-medium transition"
+                      disabled={!selectedLocation}
+                      className="w-full px-4 py-2 bg-sky-600 text-white rounded-lg hover:bg-sky-700 flex items-center justify-center gap-2 font-medium transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Plus className="w-4 h-4" />
                       Add
                     </button>
                   </div>
                 </div>
+                <p className="text-xs text-gray-500 mt-3">
+                  These time blocks are shared with the <span className="font-medium">Schedule</span> menu — changes are reflected in both views.
+                </p>
               </div>
             </div>
           )}
@@ -359,18 +427,18 @@ export default function AvailabilityManager({ providerId }: AvailabilityManagerP
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Scheduled Time Off</h3>
                 <div className="space-y-3">
-                  {unavailability.length === 0 ? (
+                  {overrides.length === 0 ? (
                     <p className="text-gray-400 text-center py-8">No scheduled time off</p>
                   ) : (
-                    unavailability.map((unavail) => (
+                    overrides.map((unavail) => (
                       <div
                         key={unavail.id}
                         className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
                       >
                         <div>
                           <div className="font-medium text-gray-900">
-                            {new Date(unavail.start_date + 'T00:00:00').toLocaleDateString()} -{' '}
-                            {new Date(unavail.end_date + 'T00:00:00').toLocaleDateString()}
+                            {new Date((unavail.start_date || '').slice(0, 10) + 'T00:00:00').toLocaleDateString()} -{' '}
+                            {new Date((unavail.end_date || '').slice(0, 10) + 'T00:00:00').toLocaleDateString()}
                           </div>
                           {unavail.reason && (
                             <p className="text-sm text-gray-500 mt-1">{unavail.reason}</p>
@@ -382,7 +450,7 @@ export default function AvailabilityManager({ providerId }: AvailabilityManagerP
                           )}
                         </div>
                         <button
-                          onClick={() => handleRemoveUnavailability(unavail.id)}
+                          onClick={() => handleRemoveOverride(unavail.id)}
                           className="p-2 text-gray-400 hover:text-red-600 transition"
                         >
                           <X className="w-4 h-4" />
@@ -397,15 +465,11 @@ export default function AvailabilityManager({ providerId }: AvailabilityManagerP
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Add Time Off</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Start Date
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
                     <input
                       type="date"
-                      value={newUnavailability.start_date}
-                      onChange={(e) =>
-                        setNewUnavailability({ ...newUnavailability, start_date: e.target.value })
-                      }
+                      value={newOverride.start_date}
+                      onChange={(e) => setNewOverride({ ...newOverride, start_date: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
                     />
                   </div>
@@ -414,24 +478,18 @@ export default function AvailabilityManager({ providerId }: AvailabilityManagerP
                     <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
                     <input
                       type="date"
-                      value={newUnavailability.end_date}
-                      onChange={(e) =>
-                        setNewUnavailability({ ...newUnavailability, end_date: e.target.value })
-                      }
+                      value={newOverride.end_date}
+                      onChange={(e) => setNewOverride({ ...newOverride, end_date: e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
                     />
                   </div>
 
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Reason (Optional)
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Reason (Optional)</label>
                     <input
                       type="text"
-                      value={newUnavailability.reason}
-                      onChange={(e) =>
-                        setNewUnavailability({ ...newUnavailability, reason: e.target.value })
-                      }
+                      value={newOverride.reason}
+                      onChange={(e) => setNewOverride({ ...newOverride, reason: e.target.value })}
                       placeholder="e.g., Conference, Vacation, Holiday"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500"
                     />
@@ -441,10 +499,8 @@ export default function AvailabilityManager({ providerId }: AvailabilityManagerP
                     <label className="flex items-center">
                       <input
                         type="checkbox"
-                        checked={newUnavailability.is_recurring}
-                        onChange={(e) =>
-                          setNewUnavailability({ ...newUnavailability, is_recurring: e.target.checked })
-                        }
+                        checked={newOverride.is_recurring}
+                        onChange={(e) => setNewOverride({ ...newOverride, is_recurring: e.target.checked })}
                         className="h-4 w-4 accent-sky-600 rounded"
                       />
                       <span className="ml-2 text-sm text-gray-700">Recurring annually</span>
@@ -453,12 +509,15 @@ export default function AvailabilityManager({ providerId }: AvailabilityManagerP
                 </div>
 
                 <button
-                  onClick={handleAddUnavailability}
+                  onClick={handleAddOverride}
                   className="mt-4 px-5 py-2.5 bg-sky-600 text-white rounded-lg hover:bg-sky-700 flex items-center gap-2 font-medium transition"
                 >
                   <Plus className="w-4 h-4" />
                   Add Time Off
                 </button>
+                <p className="text-xs text-gray-500 mt-3">
+                  Time off is shared with the <span className="font-medium">Schedule → Date Overrides</span> tab.
+                </p>
               </div>
             </div>
           )}
