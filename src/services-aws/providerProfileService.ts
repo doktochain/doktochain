@@ -83,15 +83,19 @@ export interface ProviderCredential {
 }
 
 export const providerProfileService = {
-  async updateProfile(providerId: string, profileData: ProviderProfileData) {
-    const { data, error } = await api.put<any>(`/providers/${providerId}`, profileData);
+  async updateProfile(_providerId: string, profileData: ProviderProfileData) {
+    const { data, error } = await api.put<any>('/providers/me', profileData);
 
     if (error) throw error;
 
     if (data && profileData.professional_photo_url) {
-      await api.put(`/user-profiles/${data.user_id}`, {
-        profile_photo_url: profileData.professional_photo_url,
-      });
+      try {
+        await api.put(`/user-profiles/${data.user_id}`, {
+          profile_photo_url: profileData.professional_photo_url,
+        });
+      } catch (err) {
+        console.warn('Could not sync photo to user profile', err);
+      }
     }
 
     return data;
