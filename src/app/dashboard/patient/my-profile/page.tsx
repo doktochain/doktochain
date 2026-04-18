@@ -14,6 +14,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '.
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../../../components/ui/tabs';
 import { Button } from '../../../../components/ui/button';
 import { Label } from '../../../../components/ui/label';
+import AddressAutocomplete, { ParsedAddress } from '../../../../components/ui/AddressAutocomplete';
+import { provinceNameToCode } from '../../../../lib/address-utils';
 
 interface UserProfile {
   id: string;
@@ -449,6 +451,22 @@ export default function MyProfile() {
                     Address
                   </h3>
                   <div className="space-y-4">
+                    <div>
+                      <Label className="block mb-1">Search Address</Label>
+                      <AddressAutocomplete
+                        placeholder="Start typing to search address..."
+                        onSelect={(addr: ParsedAddress) => {
+                          setFormData((prev: any) => ({
+                            ...prev,
+                            address_line1: addr.addressLine1 || prev.address_line1,
+                            city: addr.city || prev.city,
+                            province: provinceNameToCode(addr.province) || prev.province,
+                            postal_code: addr.postalCode || prev.postal_code,
+                          }));
+                        }}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">Pick a suggestion to auto-fill the fields below.</p>
+                    </div>
                     <Input type="text" name="address_line1" value={formData.address_line1} onChange={handleChange} placeholder="Street address" />
                     <Input type="text" name="address_line2" value={formData.address_line2} onChange={handleChange} placeholder="Apartment, suite, etc. (optional)" />
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
