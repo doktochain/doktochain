@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Building2, Save } from 'lucide-react';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { clinicService, Clinic } from '../../../../services/clinicService';
+import AddressAutocomplete, { ParsedAddress } from '../../../../components/ui/AddressAutocomplete';
+import { provinceNameToCode } from '../../../../lib/address-utils';
 
 const PROVINCES = [
   'ON', 'QC', 'BC', 'AB', 'MB', 'SK', 'NS', 'NB', 'NL', 'PE', 'NT', 'NU', 'YT',
@@ -153,6 +155,23 @@ export default function ClinicProfilePage() {
             onChange={(e) => setForm({ ...form, website: e.target.value })}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Search Address</label>
+          <AddressAutocomplete
+            placeholder="Start typing to search address..."
+            onSelect={(addr: ParsedAddress) => {
+              setForm((prev) => ({
+                ...prev,
+                address_line1: addr.addressLine1 || prev.address_line1,
+                city: addr.city || prev.city,
+                province: provinceNameToCode(addr.province) || prev.province,
+                postal_code: addr.postalCode || prev.postal_code,
+              }));
+            }}
+          />
+          <p className="text-xs text-gray-500 mt-1">Pick a suggestion to auto-fill the fields below.</p>
         </div>
 
         <div>
