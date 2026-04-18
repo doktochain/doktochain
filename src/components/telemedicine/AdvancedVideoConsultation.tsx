@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Video, VideoOff, Mic, MicOff, MonitorUp, Phone, MessageSquare,
   Upload, FileText, Users, Settings, Maximize2, Minimize2, Camera,
-  Play, Pause, MoreVertical, AlertCircle, Stethoscope, Shield, User
+  Play, Pause, Stethoscope, Shield, User
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { advancedTelemedicineService, TelemedicineSession } from '../../services/advancedTelemedicineService';
@@ -42,32 +42,73 @@ export default function AdvancedVideoConsultation({
   const [newMessage, setNewMessage] = useState('');
   const [files, setFiles] = useState<any[]>([]);
   const [callDuration, setCallDuration] = useState(0);
-  const [connectionQuality, setConnectionQuality] = useState<'excellent' | 'good' | 'fair' | 'poor'>('good');
+  const [connectionQuality] = useState<'excellent' | 'good' | 'fair' | 'poor'>('good');
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+
+  const isDemo = sessionId.startsWith('demo-');
 
   useEffect(() => {
-    loadSession();
+    if (!isDemo) {
+      loadSession();
+    }
+    startLocalMedia();
     const timer = setInterval(() => {
       setCallDuration(prev => prev + 1);
     }, 1000);
 
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      stopLocalMedia();
+    };
   }, [sessionId]);
 
   useEffect(() => {
-    if (showChat) {
+    if (showChat && !isDemo) {
       loadChatMessages();
     }
   }, [showChat]);
 
   useEffect(() => {
-    if (showFiles) {
+    if (showFiles && !isDemo) {
       loadFiles();
     }
   }, [showFiles]);
+
+  const startLocalMedia = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+      localStreamRef.current = stream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+    } catch (error: any) {
+      console.warn('Could not access camera/microphone:', error);
+      if (error?.name === 'NotAllowedError') {
+        toast.error('Camera/microphone access denied. Please enable permissions to use video consultation.');
+      } else {
+        toast.error('Could not access camera/microphone. Check your device settings.');
+      }
+    }
+  };
+
+  const stopLocalMedia = () => {
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(t => t.stop());
+      localStreamRef.current = null;
+    }
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach(t => t.stop());
+      screenStreamRef.current = null;
+    }
+  };
 
   const loadSession = async () => {
     try {
@@ -97,29 +138,82 @@ export default function AdvancedVideoConsultation({
   };
 
   const toggleVideo = () => {
-    setIsVideoEnabled(!isVideoEnabled);
+    const next = !isVideoEnabled;
+    setIsVideoEnabled(next);
+    const stream = localStreamRef.current;
+    if (stream) {
+      stream.getVideoTracks().forEach(t => (t.enabled = next));
+    }
   };
 
   const toggleAudio = () => {
-    setIsAudioEnabled(!isAudioEnabled);
+    const next = !isAudioEnabled;
+    setIsAudioEnabled(next);
+    const stream = localStreamRef.current;
+    if (stream) {
+      stream.getAudioTracks().forEach(t => (t.enabled = next));
+    }
   };
 
   const toggleScreenShare = async () => {
     try {
-      if (!isScreenSharing) {
-        await advancedTelemedicineService.updateSessionSettings(sessionId, {
-          screen_sharing_used: true,
-        });
+      if (isScreenSharing) {
+        if (screenStreamRef.current) {
+          screenStreamRef.current.getTracks().forEach(t => t.stop());
+          screenStreamRef.current = null;
+        }
+        if (localVideoRef.current && localStreamRef.current) {
+          localVideoRef.current.srcObject = localStreamRef.current;
+        }
+        setIsScreenSharing(false);
+        toast.success('Screen sharing stopped');
+        return;
       }
-      setIsScreenSharing(!isScreenSharing);
-    } catch (error) {
-      console.error('Error toggling screen share:', error);
+
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: false,
+      });
+      screenStreamRef.current = displayStream;
+
+      displayStream.getVideoTracks()[0]?.addEventListener('ended', () => {
+        screenStreamRef.current = null;
+        if (localVideoRef.current && localStreamRef.current) {
+          localVideoRef.current.srcObject = localStreamRef.current;
+        }
+        setIsScreenSharing(false);
+      });
+
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = displayStream;
+      }
+      setIsScreenSharing(true);
+      toast.success('Screen sharing started');
+
+      if (!isDemo) {
+        try {
+          await advancedTelemedicineService.updateSessionSettings(sessionId, {
+            screen_sharing_used: true,
+          });
+        } catch {}
+      }
+    } catch (error: any) {
+      if (error?.name !== 'NotAllowedError') {
+        console.error('Error toggling screen share:', error);
+        toast.error('Failed to start screen sharing');
+      }
     }
   };
 
   const toggleRecording = async () => {
-    if (!isRecording && !session?.recording_consent_obtained) {
+    if (!isRecording && !isDemo && !session?.recording_consent_obtained) {
       setShowRecordingConsent(true);
+      return;
+    }
+
+    if (isDemo) {
+      setIsRecording(!isRecording);
+      toast.success(!isRecording ? 'Recording started (demo)' : 'Recording stopped (demo)');
       return;
     }
 
@@ -128,8 +222,10 @@ export default function AdvancedVideoConsultation({
         recording_enabled: !isRecording,
       });
       setIsRecording(!isRecording);
+      toast.success(!isRecording ? 'Recording started' : 'Recording stopped');
     } catch (error) {
       console.error('Error toggling recording:', error);
+      toast.error('Failed to toggle recording');
     }
   };
 
@@ -146,8 +242,10 @@ export default function AdvancedVideoConsultation({
         recording_enabled: true,
       });
       setIsRecording(true);
+      toast.success('Recording started');
     } catch (error) {
       console.error('Error toggling recording:', error);
+      toast.error('Failed to start recording');
     }
   };
 
@@ -169,17 +267,35 @@ export default function AdvancedVideoConsultation({
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
 
+    const text = newMessage.trim();
+
+    if (isDemo) {
+      setChatMessages(prev => [
+        ...prev,
+        {
+          id: `demo-msg-${Date.now()}`,
+          sender_id: userId,
+          sender_role: role,
+          message_content: text,
+          created_at: new Date().toISOString(),
+        },
+      ]);
+      setNewMessage('');
+      return;
+    }
+
     try {
       await advancedTelemedicineService.sendChatMessage(
         sessionId,
         userId,
         role,
-        newMessage
+        text
       );
       setNewMessage('');
       await loadChatMessages();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending message:', error);
+      toast.error(error?.message || 'Failed to send message');
     }
   };
 
@@ -192,20 +308,65 @@ export default function AdvancedVideoConsultation({
       return;
     }
 
+    if (isDemo) {
+      setFiles(prev => [
+        ...prev,
+        {
+          id: `demo-file-${Date.now()}`,
+          file_name: file.name,
+          file_size_mb: file.size / (1024 * 1024),
+          uploaded_by: userId,
+          created_at: new Date().toISOString(),
+          _localBlob: file,
+        },
+      ]);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      toast.success('File attached (demo)');
+      return;
+    }
+
     try {
       await advancedTelemedicineService.uploadSessionFile(sessionId, userId, file);
+      if (fileInputRef.current) fileInputRef.current.value = '';
       await loadFiles();
-    } catch (error) {
+      toast.success('File uploaded');
+    } catch (error: any) {
       console.error('Error uploading file:', error);
+      toast.error(error?.message || 'Failed to upload file');
+    }
+  };
+
+  const handleFileDownload = async (file: any) => {
+    try {
+      if (file._localBlob) {
+        const url = URL.createObjectURL(file._localBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = file.file_name;
+        a.click();
+        URL.revokeObjectURL(url);
+        return;
+      }
+      const blob = await advancedTelemedicineService.downloadSessionFile(file.id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.file_name;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error('Error downloading file:', error);
+      toast.error(error?.message || 'Failed to download file');
     }
   };
 
   const changeVideoQuality = async (quality: typeof videoQuality) => {
+    setVideoQuality(quality);
+    if (isDemo) return;
     try {
       await advancedTelemedicineService.updateSessionSettings(sessionId, {
         video_quality: quality,
       });
-      setVideoQuality(quality);
     } catch (error) {
       console.error('Error changing quality:', error);
     }
@@ -282,7 +443,7 @@ export default function AdvancedVideoConsultation({
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4" />
                 <span className="text-sm">
-                  {session?.patients?.user_profiles?.full_name || 'Patient'}
+                  {(session as any)?.patients?.user_profiles?.full_name || 'Patient'}
                 </span>
               </div>
             </div>
@@ -516,7 +677,10 @@ export default function AdvancedVideoConsultation({
                     </p>
                   </div>
                 </div>
-                <button className="text-blue-600 hover:text-blue-700 text-sm">
+                <button
+                  onClick={() => handleFileDownload(file)}
+                  className="text-blue-600 hover:text-blue-700 text-sm"
+                >
                   Download
                 </button>
               </div>
