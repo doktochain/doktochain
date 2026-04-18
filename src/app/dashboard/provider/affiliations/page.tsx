@@ -41,13 +41,18 @@ export default function ProviderAffiliationsPage() {
   };
 
   const openRequestModal = async () => {
+    setShowRequestModal(true);
     try {
       const clinics = await clinicService.getAvailableClinics();
       setAvailableClinics(clinics);
-    } catch {
-      toast.error('Failed to load clinics');
+      if (clinics.length === 0) {
+        toast.info('No clinics are currently available. Try again later or contact support.');
+      }
+    } catch (err: any) {
+      console.error('Failed to load clinics:', err);
+      setAvailableClinics([]);
+      toast.error(err?.message || 'Failed to load clinics');
     }
-    setShowRequestModal(true);
   };
 
   const submitRequest = async () => {
