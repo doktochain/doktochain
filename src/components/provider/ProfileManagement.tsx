@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { User, GraduationCap, Image, Video, Save, Plus, X, Languages, Clock, Calendar, Building2, DollarSign, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { providerProfileService, type ProviderProfileData, type Specialty, type Procedure, type Language } from '../../services/providerProfileService';
+import { useAuthActions } from '../../contexts/AuthContext';
 
 interface ProfileManagementProps {
   providerId: string;
 }
 
 export default function ProfileManagement({ providerId }: ProfileManagementProps) {
+  const { refreshProfile } = useAuthActions();
   const [activeTab, setActiveTab] = useState('bio');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -130,8 +132,12 @@ export default function ProfileManagement({ providerId }: ProfileManagementProps
         video_intro_url: videoUrl,
       });
 
+      setPhotoFile(null);
+      setVideoFile(null);
+
       toast.success('Profile updated successfully!');
-      loadData();
+      await loadData();
+      try { await refreshProfile(); } catch {}
     } catch (error) {
       console.error('Error saving profile:', error);
       toast.error('Failed to save profile');
@@ -281,12 +287,19 @@ export default function ProfileManagement({ providerId }: ProfileManagementProps
                   Professional Photo
                 </label>
                 <div className="flex items-center gap-4">
-                  {profileData.professional_photo_url && (
+                  {profileData.professional_photo_url ? (
                     <img
                       src={profileData.professional_photo_url}
                       alt="Profile"
-                      className="w-32 h-32 rounded-full object-cover"
+                      className="w-32 h-32 rounded-full object-cover border border-gray-200 bg-gray-100"
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.display = 'none';
+                      }}
                     />
+                  ) : (
+                    <div className="w-32 h-32 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400">
+                      <User className="w-12 h-12" />
+                    </div>
                   )}
                   <div>
                     <input
