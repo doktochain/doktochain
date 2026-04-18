@@ -54,6 +54,7 @@ interface AuthActionsContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 type AuthContextType = AuthStateContextType & AuthActionsContextType;
@@ -309,10 +310,10 @@ const loadUserDataAWS = useCallback(async (_authUser: AuthUser) => {
     if (!user) throw new Error('No user logged in');
 
     if (USE_AWS) {
-      const { error } = await api.put(`/patients/profile/${user.id}`, updates);
+      const { error } = await api.put('/auth/me', updates);
       if (error) throw new Error(error.message);
-
-      const { data: updatedProfile } = await api.get<UserProfile>(`/patients/profile/${user.id}`);
+    
+      const { data: updatedProfile } = await api.get<UserProfile>('/auth/me');
       if (updatedProfile) {
         setProfile(updatedProfile);
       }
@@ -347,12 +348,18 @@ const loadUserDataAWS = useCallback(async (_authUser: AuthUser) => {
     hasRole,
   }), [user, profile, roles, session, loading, hasRole]);
 
+  const refreshProfile = useCallback(async () => {
+    if (!user) return;
+    await loadUserData(user);
+  }, [user, loadUserData]);
+
   const actionsValue = useMemo<AuthActionsContextType>(() => ({
     signUp,
     signIn,
     signOut,
     updateProfile,
-  }), [signUp, signIn, signOut, updateProfile]);
+    refreshProfile,
+  }), [signUp, signIn, signOut, updateProfile, refreshProfile]);
 
   return (
     <AuthStateContext.Provider value={stateValue}>
