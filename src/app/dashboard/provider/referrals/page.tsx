@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import {
   ArrowRight, ArrowLeft, Send, Inbox, Plus, Search,
   CheckCircle, Clock, XCircle, Calendar, MapPin, ExternalLink,
-  AlertTriangle, User, Building2, Phone, FileText,
+  AlertTriangle, User, Building2, Phone, FileText, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { referralService, Referral, CreateReferralData } from '../../../../services/referralService';
 import { providerService } from '../../../../services/providerService';
+import { patientService } from '../../../../services/patientService';
 import { useAuth } from '../../../../contexts/AuthContext';
 
 type Tab = 'sent' | 'received';
@@ -339,8 +340,9 @@ function CreateReferralModal({
 }) {
   const [referralType, setReferralType] = useState<'internal' | 'external'>('internal');
   const [patientSearch, setPatientSearch] = useState('');
-  const [patients, setPatients] = useState<any[]>([]);
+  const [patientResults, setPatientResults] = useState<any[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<any>(null);
+  const [searchingPatients, setSearchingPatients] = useState(false);
   const [providerSearch, setProviderSearch] = useState('');
   const [providers, setProviders] = useState<any[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<any>(null);
@@ -370,6 +372,33 @@ function CreateReferralModal({
     }, 300);
     return () => clearTimeout(timer);
   }, [providerSearch]);
+
+  useEffect(() => {
+    const term = patientSearch.trim();
+    if (selectedPatient) return;
+    if (term.length < 2) {
+      setPatientResults([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setSearchingPatients(true);
+      try {
+        const results = await patientService.searchPatients(term, 10);
+        if (!cancelled) setPatientResults(results || []);
+      } catch (err) {
+        console.warn('Patient search failed', err);
+        if (!cancelled) setPatientResults([]);
+      } finally {
+        if (!cancelled) setSearchingPatients(false);
+      }
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [patientSearch, selectedPatient]);
 
   const handleSubmit = async () => {
     if (!selectedPatient) { toast.error('Select a patient'); return; }
@@ -436,14 +465,73 @@ function CreateReferralModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Patient ID</label>
-            <input
-              type="text"
-              value={selectedPatient?.id || patientSearch}
-              onChange={e => { setPatientSearch(e.target.value); setSelectedPatient({ id: e.target.value }); }}
-              placeholder="Enter patient ID..."
-              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
-            />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Patient *</label>
+            {selectedPatient ? (
+              <div className="flex items-start justify-between gap-3 p-3 border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                    {`${selectedPatient.first_name || ''} ${selectedPatient.last_name || ''}`.trim() || 'Selected patient'}
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 space-x-2 truncate">
+                    {selectedPatient.email && <span>{selectedPatient.email}</span>}
+                    {selectedPatient.health_card_number && <span>· HC: {selectedPatient.health_card_number}</span>}
+                    {selectedPatient.date_of_birth && (
+                      <span>· DOB: {new Date(selectedPatient.date_of_birth).toLocaleDateString()}</span>
+                    )}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setSelectedPatient(null); setPatientSearch(''); setPatientResults([]); }}
+                  className="text-gray-500 hover:text-red-600"
+                  aria-label="Clear selected patient"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={patientSearch}
+                    onChange={e => setPatientSearch(e.target.value)}
+                    placeholder="Search by name, email, health card, or DOB (YYYY-MM-DD)..."
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                  />
+                </div>
+                {searchingPatients && (
+                  <p className="mt-2 text-xs text-gray-500">Searching...</p>
+                )}
+                {patientResults.length > 0 && (
+                  <div className="mt-2 max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-lg divide-y divide-gray-100 dark:divide-gray-700">
+                    {patientResults.map(p => {
+                      const name = `${p.first_name || ''} ${p.last_name || ''}`.trim() || 'Unknown patient';
+                      const dob = p.date_of_birth ? new Date(p.date_of_birth).toLocaleDateString() : null;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => { setSelectedPatient(p); setPatientSearch(''); setPatientResults([]); }}
+                          className="w-full text-left p-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">{name}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 space-x-2">
+                            {p.email && <span>{p.email}</span>}
+                            {p.health_card_number && <span>· HC: {p.health_card_number}</span>}
+                            {dob && <span>· DOB: {dob}</span>}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {!searchingPatients && patientSearch.trim().length >= 2 && patientResults.length === 0 && (
+                  <p className="mt-2 text-xs text-gray-500">No patients found.</p>
+                )}
+              </>
+            )}
           </div>
 
           {referralType === 'internal' ? (
