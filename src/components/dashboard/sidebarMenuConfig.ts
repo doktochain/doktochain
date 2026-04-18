@@ -284,6 +284,7 @@ export const adminMenu: MenuSection[] = [
         submenu: [
           { label: 'admin.manageProviders', href: '/dashboard/admin/clinic/providers' },
           { label: 'admin.providerApplications', href: '/dashboard/admin/provider-applications' },
+          { label: 'admin.providerCredentials', href: '/dashboard/admin/provider-credentials' },
         ],
       },
       { label: 'admin.patients', icon: User, href: '/dashboard/admin/clinic/patients' },
