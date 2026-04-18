@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import VirtualWaitingRoomManager from '../../../../components/telemedicine/VirtualWaitingRoomManager';
 import AdvancedVideoConsultation from '../../../../components/telemedicine/AdvancedVideoConsultation';
 import AISoapNotesEditor from '../../../../components/telemedicine/AISoapNotesEditor';
@@ -12,16 +13,34 @@ type ViewMode = 'waiting-room' | 'consultation' | 'soap-notes' | 'post-visit';
 
 export default function ProviderTelemedicinePage() {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<ViewMode>('waiting-room');
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [activeAppointmentId, setActiveAppointmentId] = useState<string | null>(null);
   const [providerId, setProviderId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [demoMode, setDemoMode] = useState(false);
+  const [stats, setStats] = useState({ active: 0, waiting: 0, completedToday: 0 });
 
   useEffect(() => {
     loadProviderData();
   }, [user]);
+
+  useEffect(() => {
+    const sessionParam = searchParams.get('session');
+    if (sessionParam && sessionParam !== activeSessionId) {
+      setActiveSessionId(sessionParam);
+      setViewMode('consultation');
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (providerId) {
+      loadStats(providerId);
+      const t = setInterval(() => loadStats(providerId), 30000);
+      return () => clearInterval(t);
+    }
+  }, [providerId]);
 
   const loadProviderData = async () => {
     if (!user) return;
@@ -35,6 +54,26 @@ export default function ProviderTelemedicinePage() {
       console.error('Error loading provider:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadStats = async (pid: string) => {
+    try {
+      const [sessions, waitingRoom] = await Promise.all([
+        advancedTelemedicineService.getProviderSessions(pid),
+        advancedTelemedicineService.getWaitingRoom(pid).catch(() => []),
+      ]);
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const completedToday = sessions.filter((s) => {
+        if (s.status !== 'completed') return false;
+        const ended = (s as any).ended_at || (s as any).updated_at;
+        return ended && new Date(ended) >= todayStart;
+      }).length;
+      const active = sessions.filter((s) => s.status === 'active').length;
+      setStats({ active, waiting: waitingRoom.length, completedToday });
+    } catch (err) {
+      console.warn('Failed to load telemedicine stats', err);
     }
   };
 
@@ -176,7 +215,7 @@ export default function ProviderTelemedicinePage() {
         <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
           <div className="flex items-center justify-between mb-4">
             <Video className="w-8 h-8" />
-            <span className="text-3xl font-bold">0</span>
+            <span className="text-3xl font-bold">{stats.active}</span>
           </div>
           <h3 className="text-lg font-semibold mb-1">Active Sessions</h3>
           <p className="text-blue-100 text-sm">Currently in progress</p>
@@ -185,7 +224,7 @@ export default function ProviderTelemedicinePage() {
         <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg p-6 text-white">
           <div className="flex items-center justify-between mb-4">
             <Users className="w-8 h-8" />
-            <span className="text-3xl font-bold">0</span>
+            <span className="text-3xl font-bold">{stats.waiting}</span>
           </div>
           <h3 className="text-lg font-semibold mb-1">Waiting Patients</h3>
           <p className="text-green-100 text-sm">In virtual waiting room</p>
@@ -194,7 +233,7 @@ export default function ProviderTelemedicinePage() {
         <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
           <div className="flex items-center justify-between mb-4">
             <FileText className="w-8 h-8" />
-            <span className="text-3xl font-bold">0</span>
+            <span className="text-3xl font-bold">{stats.completedToday}</span>
           </div>
           <h3 className="text-lg font-semibold mb-1">Completed Today</h3>
           <p className="text-blue-100 text-sm">Telemedicine sessions</p>
