@@ -243,12 +243,19 @@ const NavBar = ({ onToggleSidebar }: NavBarProps) => {
                   height={35}
                   alt="User"
                   className="w-10 h-10 rounded-full object-cover"
+                  onError={(e) => {
+                    const fallback = (e.currentTarget as HTMLImageElement).nextElementSibling as HTMLElement | null;
+                    (e.currentTarget as HTMLImageElement).style.display = 'none';
+                    if (fallback) fallback.style.display = 'flex';
+                  }}
                 />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm">
-                  {userName.charAt(0).toUpperCase()}
-                </div>
-              )}
+              ) : null}
+              <div
+                className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 items-center justify-center text-white font-bold text-sm"
+                style={{ display: userProfile?.profile_photo_url ? 'none' : 'flex' }}
+              >
+                {userName.charAt(0).toUpperCase()}
+              </div>
             </button>
              {openDropdown === 'profile' && (
                <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border rounded shadow-lg z-50 dropdown-panel">
@@ -260,12 +267,19 @@ const NavBar = ({ onToggleSidebar }: NavBarProps) => {
                        height={40}
                        alt="User"
                        className="rounded-full object-cover w-10 h-10"
+                       onError={(e) => {
+                         const fallback = (e.currentTarget as HTMLImageElement).nextElementSibling as HTMLElement | null;
+                         (e.currentTarget as HTMLImageElement).style.display = 'none';
+                         if (fallback) fallback.style.display = 'flex';
+                       }}
                      />
-                   ) : (
-                     <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold">
-                       {userName.charAt(0).toUpperCase()}
-                     </div>
-                   )}
+                   ) : null}
+                   <div
+                     className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 items-center justify-center text-white font-bold"
+                     style={{ display: userProfile?.profile_photo_url ? 'none' : 'flex' }}
+                   >
+                     {userName.charAt(0).toUpperCase()}
+                   </div>
                    <div>
                      <div className="font-semibold text-gray-800 dark:text-white">{userName}</div>
                      <div className="text-xs" style={{ color: theme.colors.light.primary }}>{userRole}</div>
