@@ -119,12 +119,21 @@ export const providerProfileService = {
   },
 
   async getAllSpecialties() {
-    const { data, error } = await api.get<any[]>('/specialties-master', {
+    const res = await api.get<any[]>('/specialties-master', {
       params: { is_active: true, order_by: 'name:asc' },
     });
 
-    if (error) throw error;
-    return data || [];
+    if (!res.error && Array.isArray(res.data) && res.data.length > 0) {
+      return res.data;
+    }
+
+    const pubRes = await api.get<any[]>('/public/specialties');
+    if (!pubRes.error && Array.isArray(pubRes.data)) {
+      return pubRes.data;
+    }
+
+    if (res.error) throw res.error;
+    return [];
   },
 
   async getProviderSpecialties(providerId: string) {
@@ -160,12 +169,21 @@ export const providerProfileService = {
   },
 
   async getAllProcedures() {
-    const { data, error } = await api.get<any[]>('/procedures-master', {
+    const res = await api.get<any[]>('/procedures-master', {
       params: { is_active: true, order_by: 'name:asc' },
     });
 
-    if (error) throw error;
-    return data || [];
+    if (!res.error && Array.isArray(res.data) && res.data.length > 0) {
+      return res.data;
+    }
+
+    const pubRes = await api.get<any[]>('/public/procedures', { params: { all: true } });
+    if (!pubRes.error && Array.isArray(pubRes.data)) {
+      return pubRes.data;
+    }
+
+    if (res.error) throw res.error;
+    return [];
   },
 
   async getProcedures(providerId: string) {
