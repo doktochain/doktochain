@@ -195,7 +195,13 @@ router.put('/me', async (event) => {
   const allowedFields = [
     'license_number', 'license_province', 'license_expiry', 'npi_number',
     'bio', 'years_of_experience', 'education',
-    'accepts_new_patients', 'telemedicine_enabled', 'languages_spoken',
+    'accepts_new_patients', 'accepting_new_patients',
+    'telemedicine_enabled', 'languages_spoken',
+    'professional_photo_url', 'video_intro_url',
+    'consultation_fee_cents', 'virtual_consultation_fee_cents',
+    'slot_duration_minutes', 'max_daily_virtual_appointments',
+    'emergency_consultation_available', 'buffer_time_minutes',
+    'professional_title', 'specialty',
   ];
 
   const updates: string[] = [];
