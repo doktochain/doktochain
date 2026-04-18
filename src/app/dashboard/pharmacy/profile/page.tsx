@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { supabase } from '../../../../lib/supabase';
 import { Building2, MapPin, Phone, Mail, CreditCard as Edit2, Save, Truck, FileText } from 'lucide-react';
+import AddressAutocomplete, { ParsedAddress } from '../../../../components/ui/AddressAutocomplete';
+import { provinceNameToCode } from '../../../../lib/address-utils';
 
 const PROVINCES = [
   'AB', 'BC', 'MB', 'NB', 'NL', 'NS', 'NT', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT'
@@ -362,6 +364,24 @@ export default function PharmacyProfile() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Address</h3>
             <div className="space-y-4">
+              {editing && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search Address</label>
+                  <AddressAutocomplete
+                    placeholder="Start typing to search address..."
+                    onSelect={(addr: ParsedAddress) => {
+                      setEditedData((prev: any) => ({
+                        ...prev,
+                        address_line1: addr.addressLine1 || prev.address_line1,
+                        city: addr.city || prev.city,
+                        province: provinceNameToCode(addr.province) || prev.province,
+                        postal_code: addr.postalCode || prev.postal_code,
+                      }));
+                    }}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Pick a suggestion to auto-fill the fields below.</p>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Street Address</label>
                 {editing ? (
