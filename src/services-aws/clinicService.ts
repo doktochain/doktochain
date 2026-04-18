@@ -763,10 +763,14 @@ export const clinicService = {
 
   async getAvailableClinics(): Promise<Clinic[]> {
     const { data, error } = await api.get<Clinic[]>('/clinics', {
-      params: { is_active: true, is_verified: true, order: 'name' },
+      params: { order: 'name:asc' },
     });
 
-    if (error) throw error;
-    return data || [];
+    if (error) {
+      console.warn('[clinicService.getAvailableClinics] primary fetch failed:', error);
+      return [];
+    }
+    const rows = Array.isArray(data) ? data : [];
+    return rows.filter((c: any) => c && c.is_active !== false && c.deleted_at == null);
   },
 };
