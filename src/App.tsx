@@ -154,6 +154,7 @@ const AdminPharmacies = lazy(() => import('./app/dashboard/admin/pharmacies/page
 const AdminMessages = lazy(() => import('./app/dashboard/admin/messages/page'));
 const AdminNotifications = lazy(() => import('./app/dashboard/admin/notifications/page'));
 const ProviderApplications = lazy(() => import('./app/dashboard/admin/provider-applications/page'));
+const AdminProviderCredentials = lazy(() => import('./app/dashboard/admin/provider-credentials/page'));
 const StaffManagement = lazy(() => import('./app/dashboard/admin/staff/page'));
 const ActivityMonitoring = lazy(() => import('./app/dashboard/admin/activity/page'));
 const AdminClinicProviders = lazy(() => import('./app/dashboard/admin/clinic/providers/page'));
@@ -387,6 +388,7 @@ function App() {
                 <Route path="dashboard/admin/dashboard/sales" element={<ProtectedRoute allowedRoles={['admin']}><DashboardLayout><AdminSales /></DashboardLayout></ProtectedRoute>} />
                 <Route path="dashboard/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><DashboardLayout><AdminUsers /></DashboardLayout></ProtectedRoute>} />
                 <Route path="dashboard/admin/provider-applications" element={<ProtectedRoute allowedRoles={['admin']}><DashboardLayout><ProviderApplications /></DashboardLayout></ProtectedRoute>} />
+                <Route path="dashboard/admin/provider-credentials" element={<ProtectedRoute allowedRoles={['admin']}><DashboardLayout><AdminProviderCredentials /></DashboardLayout></ProtectedRoute>} />
                 <Route path="dashboard/admin/staff" element={<ProtectedRoute allowedRoles={['admin', 'provider']}><DashboardLayout><StaffManagement /></DashboardLayout></ProtectedRoute>} />
                 <Route path="dashboard/admin/activity" element={<ProtectedRoute allowedRoles={['admin', 'provider']}><DashboardLayout><ActivityMonitoring /></DashboardLayout></ProtectedRoute>} />
                 <Route path="dashboard/admin/pharmacies" element={<ProtectedRoute allowedRoles={['admin']}><DashboardLayout><AdminPharmacies /></DashboardLayout></ProtectedRoute>} />
