@@ -5,6 +5,7 @@ import {
   providerProfileService,
   ProviderCredential,
 } from '../../../../services/providerProfileService';
+import { providerOnboardingService } from '../../../../services/providerOnboardingService';
 import { ConfirmDialog } from '../../../../components/ui/confirm-dialog';
 import {
   Award,
@@ -78,10 +79,47 @@ export default function CredentialsPage() {
     }
   };
 
+  const mapDocTypeToCredentialType = (docType: string): string => {
+    const t = (docType || '').toLowerCase();
+    if (t.includes('license')) return 'license';
+    if (t.includes('board') || t.includes('certification')) return 'certification';
+    if (t.includes('education') || t.includes('degree') || t.includes('diploma')) return 'education';
+    if (t.includes('malpractice') || t.includes('insurance')) return 'malpractice';
+    return 'other';
+  };
+
   const loadCredentials = async (pid: string) => {
     try {
       const data = await providerProfileService.getCredentials(pid);
-      setCredentials(data);
+
+      let onboardingDocs: any[] = [];
+      try {
+        const application = user ? await providerOnboardingService.getApplicationByUserId(user.id) : null;
+        if (application?.id) {
+          onboardingDocs = await providerOnboardingService.getApplicationDocuments(application.id);
+        }
+      } catch (err) {
+        console.warn('Could not load onboarding documents:', err);
+      }
+
+      const existingDocUrls = new Set(
+        (data || []).map((c) => (c.document_url || '').trim()).filter(Boolean)
+      );
+
+      const onboardingAsCredentials: ProviderCredential[] = (onboardingDocs || [])
+        .filter((d) => d?.file_url && !existingDocUrls.has((d.file_url || '').trim()))
+        .map((d: any) => ({
+          id: `onboarding-${d.id}`,
+          provider_id: pid,
+          credential_type: mapDocTypeToCredentialType(d.document_type),
+          credential_name: d.document_name || (d.document_type || 'Document').replace(/_/g, ' '),
+          issuing_organization: 'Uploaded during onboarding',
+          document_url: d.file_url,
+          is_verified: d.verification_status === 'verified',
+          created_at: d.created_at || d.uploaded_at || new Date().toISOString(),
+        }));
+
+      setCredentials([...(data || []), ...onboardingAsCredentials]);
     } catch (error) {
       console.error('Error loading credentials:', error);
     }
@@ -131,6 +169,10 @@ export default function CredentialsPage() {
 
   const executeDelete = async (id: string) => {
     if (!providerId) return;
+    if (id.startsWith('onboarding-')) {
+      setMessage({ type: 'error', text: 'Onboarding documents can only be managed by an admin.' });
+      return;
+    }
 
     try {
       await providerProfileService.deleteCredential(id);
@@ -311,12 +353,18 @@ export default function CredentialsPage() {
                         >
                           {STATUS_LABELS[status]}
                         </span>
-                        <button
-                          onClick={() => setDeleteTargetId(credential.id)}
-                          className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {credential.id.startsWith('onboarding-') ? (
+                          <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700" title="Uploaded during onboarding">
+                            From onboarding
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => setDeleteTargetId(credential.id)}
+                            className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
 
