@@ -54,7 +54,7 @@ router.post('/presign-upload', async (event) => {
   }
 
   const ext = body.fileName.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
-  const key = `storage/${body.prefix}/${user.userId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+  const key = `${body.prefix}/${user.userId}/${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
 
   const command = new PutObjectCommand({
     Bucket: BUCKET,
@@ -69,7 +69,7 @@ router.post('/presign-upload', async (event) => {
 
   const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
 
-  const publicUrl = `https://d1pcyuvbqz55za.cloudfront.net/${key}`;
+  const publicUrl = `https://d1pcyuvbqz55za.cloudfront.net/storage/${key}`;
 return created({ uploadUrl, key, publicUrl, expiresIn: 300 }, origin);
 });
 
