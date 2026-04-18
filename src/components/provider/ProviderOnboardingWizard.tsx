@@ -6,6 +6,8 @@ import {
   Stethoscope, Shield, Building2, FileCheck, CheckCircle,
   Upload, X, AlertCircle, Clock
 } from 'lucide-react';
+import AddressAutocomplete, { ParsedAddress } from '../ui/AddressAutocomplete';
+import { provinceNameToCode } from '../../lib/address-utils';
 
 interface ProviderOnboardingWizardProps {
   onComplete: () => void;
@@ -580,6 +582,23 @@ function PracticeDetailsStep({ data, onChange, languages, toggleLanguage, inputC
           placeholder="e.g., Downtown Family Health Clinic"
           className={inputClass}
         />
+      </div>
+
+      <div>
+        <label className={labelClass}>Search Practice Address</label>
+        <AddressAutocomplete
+          placeholder="Start typing to search address..."
+          onSelect={(addr: ParsedAddress) => {
+            onChange({
+              ...data,
+              practice_address_line1: addr.addressLine1 || data.practice_address_line1,
+              practice_city: addr.city || data.practice_city,
+              practice_province: provinceNameToCode(addr.province) || data.practice_province,
+              practice_postal_code: addr.postalCode || data.practice_postal_code,
+            });
+          }}
+        />
+        <p className="text-xs text-gray-500 mt-1">Pick a suggestion to auto-fill the fields below.</p>
       </div>
 
       <div>
