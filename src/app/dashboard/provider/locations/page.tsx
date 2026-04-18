@@ -5,6 +5,8 @@ import { providerService, ProviderLocation } from '../../../../services/provider
 import { useAuth } from '../../../../contexts/AuthContext';
 import { ConfirmDialog } from '../../../../components/ui/confirm-dialog';
 import AddressMap from '../../../../components/maps/AddressMap';
+import AddressAutocomplete, { ParsedAddress } from '../../../../components/ui/AddressAutocomplete';
+import { provinceNameToCode } from '../../../../lib/address-utils';
 
 const PROVINCES = [
   { code: 'ON', name: 'Ontario' },
@@ -310,6 +312,25 @@ export default function ClinicLocationsPage() {
                   onChange={(e) => setFormData({ ...formData, location_name: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Search Address
+                </label>
+                <AddressAutocomplete
+                  placeholder="Start typing to search address..."
+                  onSelect={(addr: ParsedAddress) => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      address_line1: addr.addressLine1 || prev.address_line1,
+                      city: addr.city || prev.city,
+                      province: provinceNameToCode(addr.province) || prev.province,
+                      postal_code: addr.postalCode || prev.postal_code,
+                    }));
+                  }}
+                />
+                <p className="text-xs text-gray-500 mt-1">Pick a suggestion to auto-fill the fields below.</p>
               </div>
 
               <div>
