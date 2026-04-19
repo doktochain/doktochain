@@ -194,9 +194,35 @@ export const authService = {
 
     if (options.businessName) {
       if (role === 'pharmacy') {
-        await api.put(`/pharmacies/by-user/${userId}`, { pharmacy_name: options.businessName });
+        const { data: existing } = await api.get<any[]>('/pharmacies', {
+          params: { user_id: userId, limit: 1 },
+        });
+        const existingRow = Array.isArray(existing) ? existing[0] : null;
+        if (existingRow?.id) {
+          await api.put(`/pharmacies/${existingRow.id}`, { pharmacy_name: options.businessName });
+        } else {
+          await api.post('/pharmacies', {
+            user_id: userId,
+            pharmacy_name: options.businessName,
+            onboarding_status: 'pending',
+          });
+        }
       } else if (role === 'clinic') {
-        await api.put(`/clinics/by-owner/${userId}`, { name: options.businessName });
+        const { data: existing } = await api.get<any[]>('/clinics', {
+          params: { owner_id: userId, limit: 1 },
+        });
+        const existingRow = Array.isArray(existing) ? existing[0] : null;
+        if (existingRow?.id) {
+          await api.put(`/clinics/${existingRow.id}`, { name: options.businessName });
+        } else {
+          await api.post('/clinics', {
+            owner_id: userId,
+            name: options.businessName,
+            onboarding_status: 'pending',
+            is_active: false,
+            is_verified: false,
+          });
+        }
       }
     }
 
