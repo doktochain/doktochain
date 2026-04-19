@@ -267,6 +267,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             const qs = event.queryStringParameters || {};
 
             if (Object.keys(qs).length > 0) {
+              if ('updated_at' in body) delete (body as any).updated_at;
               const keys = Object.keys(body).map(sanitizeColumnName);
               const values = Object.values(body);
               const setClauses = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
@@ -292,6 +293,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           }
 
           const body = parseBody<Record<string, unknown>>(event.body);
+          if ('updated_at' in body) delete (body as any).updated_at;
           const keys = Object.keys(body).map(sanitizeColumnName);
           const values = Object.values(body);
           const setClauses = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
