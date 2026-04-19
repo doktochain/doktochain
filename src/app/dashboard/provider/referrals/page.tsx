@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import {
-  ArrowRight, ArrowLeft, Send, Inbox, Plus, Search,
+  Send, Inbox, Plus, Search,
   CheckCircle, Clock, XCircle, Calendar, MapPin, ExternalLink,
-  AlertTriangle, User, Building2, Phone, FileText, X,
+  AlertTriangle, User, Building2, Phone, X, Printer, Mail, Copy,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { referralService, Referral, CreateReferralData } from '../../../../services/referralService';
@@ -12,14 +12,144 @@ import { useAuth } from '../../../../contexts/AuthContext';
 
 type Tab = 'sent' | 'received';
 
+const extractExternalEmail = (notes: string | null | undefined): string | null => {
+  if (!notes) return null;
+  const m = notes.match(/\[Email:\s*([^\]\s]+)\s*\]/i);
+  return m ? m[1] : null;
+};
+
+const stripEmailTag = (notes: string | null | undefined): string => {
+  if (!notes) return '';
+  return notes.replace(/\[Email:\s*[^\]]+\]/gi, '').trim();
+};
+
+const buildReferralLetter = (params: {
+  referral: any;
+  patient: any;
+  referringProvider: { name: string; email?: string; phone?: string };
+}): { subject: string; body: string; html: string } => {
+  const { referral, patient, referringProvider } = params;
+  const patientName = patient
+    ? (`${patient.first_name || ''} ${patient.last_name || ''}`.trim() || 'Patient')
+    : 'Patient';
+  const patientDob = patient?.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : '';
+  const patientHc = patient?.health_card_number || '';
+  const today = new Date().toLocaleDateString();
+  const urgency = (referral?.urgency || 'routine').toString();
+  const reason = referral?.referral_reason || '';
+  const notes = stripEmailTag(referral?.notes);
+
+  const recipientLabel = referral?.external_provider_name
+    || (referral?.receiving_provider?.user_profiles
+      ? `Dr. ${referral.receiving_provider.user_profiles.first_name} ${referral.receiving_provider.user_profiles.last_name}`
+      : 'Colleague');
+
+  const subject = `Patient Referral – ${patientName} (${urgency.toUpperCase()})`;
+
+  const body = [
+    `Dear ${recipientLabel},`,
+    '',
+    `I am referring ${patientName}${patientDob ? ` (DOB: ${patientDob})` : ''}${patientHc ? `, HC #${patientHc}` : ''} to your service.`,
+    '',
+    `Reason for referral: ${reason}`,
+    `Urgency: ${urgency}`,
+    ...(notes ? ['', `Additional notes: ${notes}`] : []),
+    '',
+    'Please find the patient\'s relevant clinical information attached or available upon request.',
+    '',
+    'Thank you for your attention to this patient.',
+    '',
+    'Sincerely,',
+    referringProvider.name,
+    ...(referringProvider.email ? [referringProvider.email] : []),
+    ...(referringProvider.phone ? [referringProvider.phone] : []),
+    '',
+    `Date: ${today}`,
+  ].join('\n');
+
+  const escape = (s: string) => String(s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/><title>${escape(subject)}</title>
+<style>
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; color:#111; max-width: 720px; margin: 40px auto; padding: 0 24px; line-height: 1.5; }
+  h1 { font-size: 20px; margin: 0 0 6px; }
+  .meta { color:#555; font-size: 12px; margin-bottom: 24px; }
+  .section { margin-top: 18px; }
+  .label { font-weight:600; color:#374151; }
+  pre { white-space: pre-wrap; font-family: inherit; font-size: 14px; }
+  .letterhead { border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 18px; }
+  .urgency { display:inline-block; padding:2px 8px; border-radius:9999px; font-size: 11px; text-transform: uppercase; background:#fef3c7; color:#92400e; }
+  .urgency.routine { background:#e5e7eb; color:#374151; }
+  .urgency.urgent { background:#ffedd5; color:#9a3412; }
+  .urgency.emergent { background:#fee2e2; color:#991b1b; }
+  @media print { body { margin: 0; padding: 24px; } .no-print { display:none; } }
+</style>
+</head><body>
+<div class="letterhead">
+  <h1>Patient Referral Letter</h1>
+  <div class="meta">Date: ${escape(today)} · <span class="urgency ${escape(urgency)}">${escape(urgency)}</span></div>
+</div>
+
+<div class="section"><span class="label">To:</span> ${escape(recipientLabel)}${referral?.external_provider_specialty ? ` · ${escape(referral.external_provider_specialty)}` : ''}</div>
+${referral?.external_provider_address ? `<div class="section"><span class="label">Address:</span> ${escape(referral.external_provider_address)}</div>` : ''}
+${referral?.external_provider_phone ? `<div class="section"><span class="label">Phone:</span> ${escape(referral.external_provider_phone)}</div>` : ''}
+${referral?.external_provider_fax ? `<div class="section"><span class="label">Fax:</span> ${escape(referral.external_provider_fax)}</div>` : ''}
+
+<div class="section"><span class="label">Patient:</span> ${escape(patientName)}${patientDob ? ` · DOB: ${escape(patientDob)}` : ''}${patientHc ? ` · HC: ${escape(patientHc)}` : ''}</div>
+
+<div class="section"><span class="label">Reason for referral:</span><br/><pre>${escape(reason)}</pre></div>
+${notes ? `<div class="section"><span class="label">Additional notes:</span><br/><pre>${escape(notes)}</pre></div>` : ''}
+
+<div class="section" style="margin-top:36px;">
+  <div>Sincerely,</div>
+  <div style="margin-top:6px;"><strong>${escape(referringProvider.name)}</strong></div>
+  ${referringProvider.email ? `<div>${escape(referringProvider.email)}</div>` : ''}
+  ${referringProvider.phone ? `<div>${escape(referringProvider.phone)}</div>` : ''}
+</div>
+
+<div class="no-print" style="margin-top:32px; text-align:center;">
+  <button onclick="window.print()" style="padding:10px 18px; font-size:14px; border:0; background:#2563eb; color:#fff; border-radius:6px; cursor:pointer;">Print / Save as PDF</button>
+</div>
+</body></html>`;
+
+  return { subject, body, html };
+};
+
+const openPrintableLetter = (letter: { html: string }) => {
+  const win = window.open('', '_blank', 'width=800,height=900');
+  if (!win) {
+    toast.error('Unable to open the letter. Please allow pop-ups for this site.');
+    return;
+  }
+  win.document.open();
+  win.document.write(letter.html);
+  win.document.close();
+};
+
+const openMailto = (email: string, letter: { subject: string; body: string }) => {
+  const href = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(letter.subject)}&body=${encodeURIComponent(letter.body)}`;
+  window.location.href = href;
+};
+
+const copyLetterText = async (letter: { subject: string; body: string }) => {
+  try {
+    await navigator.clipboard.writeText(`${letter.subject}\n\n${letter.body}`);
+    toast.success('Referral letter copied to clipboard');
+  } catch {
+    toast.error('Failed to copy to clipboard');
+  }
+};
+
 export default function ProviderReferralsPage() {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('sent');
   const [sentReferrals, setSentReferrals] = useState<Referral[]>([]);
   const [receivedReferrals, setReceivedReferrals] = useState<Referral[]>([]);
   const [loading, setLoading] = useState(true);
   const [providerId, setProviderId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [postCreate, setPostCreate] = useState<null | { referral: any; patient: any; referringProvider: any }>(null);
 
   useEffect(() => {
     if (user) loadData();
@@ -200,6 +330,55 @@ export default function ProviderReferralsPage() {
           </div>
         )}
 
+        {type === 'sent' && isExternal && (() => {
+          const email = extractExternalEmail(referral.notes);
+          const referringProvider = {
+            name: userProfile
+              ? `Dr. ${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim()
+              : 'Referring Provider',
+            email: userProfile?.email || user?.email || '',
+            phone: (userProfile as any)?.phone || '',
+          };
+          const letter = buildReferralLetter({
+            referral,
+            patient: referral.patients
+              ? {
+                  first_name: referral.patients.user_profiles?.first_name,
+                  last_name: referral.patients.user_profiles?.last_name,
+                  id: referral.patients.id,
+                }
+              : null,
+            referringProvider,
+          });
+          return (
+            <div className="flex flex-wrap gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
+              {email && (
+                <button
+                  onClick={() => openMailto(email, letter)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-sky-600 hover:bg-sky-700 text-white"
+                >
+                  <Mail className="w-3.5 h-3.5" />
+                  Email
+                </button>
+              )}
+              <button
+                onClick={() => openPrintableLetter(letter)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Print / PDF
+              </button>
+              <button
+                onClick={() => copyLetterText(letter)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-800 dark:bg-gray-700 dark:hover:bg-gray-600 dark:text-gray-200"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                Copy letter
+              </button>
+            </div>
+          );
+        })()}
+
         {type === 'received' && referral.status === 'pending' && (
           <div className="flex items-center gap-2 pt-3 border-t border-gray-100 dark:border-gray-700">
             <button
@@ -322,9 +501,106 @@ export default function ProviderReferralsPage() {
         <CreateReferralModal
           providerId={providerId}
           onClose={() => setShowCreateModal(false)}
-          onCreated={() => { setShowCreateModal(false); loadData(); }}
+          onCreated={(created) => {
+            setShowCreateModal(false);
+            loadData();
+            if (created?.referral?.receiving_provider_id == null) {
+              setPostCreate(created || null);
+            }
+          }}
         />
       )}
+
+      {postCreate && (
+        <SendExternalReferralModal
+          info={postCreate}
+          onClose={() => setPostCreate(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function SendExternalReferralModal({
+  info,
+  onClose,
+}: {
+  info: { referral: any; patient: any; referringProvider: any };
+  onClose: () => void;
+}) {
+  const letter = buildReferralLetter(info);
+  const email = info.referral?.external_provider_email || extractExternalEmail(info.referral?.notes);
+  const phone = info.referral?.external_provider_phone;
+  const fax = info.referral?.external_provider_fax;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-lg w-full shadow-xl">
+        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Referral created</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Your referral has been saved. Choose how you'd like to deliver it to <strong>{info.referral?.external_provider_name}</strong>.
+              </p>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 space-y-3">
+          {email && (
+            <button
+              onClick={() => openMailto(email, letter)}
+              className="w-full flex items-center gap-3 p-3 bg-sky-50 hover:bg-sky-100 dark:bg-sky-900/30 dark:hover:bg-sky-900/50 rounded-lg text-left transition"
+            >
+              <Mail className="w-5 h-5 text-sky-600" />
+              <div>
+                <div className="font-semibold text-sky-900 dark:text-sky-100">Email referral letter</div>
+                <div className="text-xs text-sky-700 dark:text-sky-200/80">Opens your mail client with the letter pre-filled to {email}</div>
+              </div>
+            </button>
+          )}
+
+          <button
+            onClick={() => openPrintableLetter(letter)}
+            className="w-full flex items-center gap-3 p-3 bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-left transition"
+          >
+            <Printer className="w-5 h-5 text-gray-700 dark:text-gray-200" />
+            <div>
+              <div className="font-semibold text-gray-900 dark:text-white">Print or save as PDF</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">Opens a printable letter you can fax, mail, or save as PDF</div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => copyLetterText(letter)}
+            className="w-full flex items-center gap-3 p-3 bg-gray-50 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-left transition"
+          >
+            <Copy className="w-5 h-5 text-gray-700 dark:text-gray-200" />
+            <div>
+              <div className="font-semibold text-gray-900 dark:text-white">Copy letter text</div>
+              <div className="text-xs text-gray-600 dark:text-gray-400">Paste it into any EMR, email, or messaging tool</div>
+            </div>
+          </button>
+
+          {(phone || fax) && (
+            <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg text-xs text-amber-900 dark:text-amber-100">
+              {phone && <div>Phone on file: <strong>{phone}</strong></div>}
+              {fax && <div>Fax on file: <strong>{fax}</strong></div>}
+              <div className="mt-1">Use your preferred fax service with the printable letter for secure delivery.</div>
+            </div>
+          )}
+        </div>
+
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+          <button onClick={onClose} className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 text-sm font-medium">
+            Done
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -336,8 +612,9 @@ function CreateReferralModal({
 }: {
   providerId: string;
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (created?: { referral: any; patient: any; referringProvider: any }) => void;
 }) {
+  const { user, userProfile } = useAuth();
   const [referralType, setReferralType] = useState<'internal' | 'external'>('internal');
   const [patientSearch, setPatientSearch] = useState('');
   const [patientResults, setPatientResults] = useState<any[]>([]);
@@ -352,6 +629,7 @@ function CreateReferralModal({
   const [notes, setNotes] = useState('');
   const [externalName, setExternalName] = useState('');
   const [externalSpecialty, setExternalSpecialty] = useState('');
+  const [externalEmail, setExternalEmail] = useState('');
   const [externalPhone, setExternalPhone] = useState('');
   const [externalFax, setExternalFax] = useState('');
   const [externalAddress, setExternalAddress] = useState('');
@@ -408,12 +686,20 @@ function CreateReferralModal({
 
     setSubmitting(true);
     try {
+      const combinedNotes = (() => {
+        if (referralType === 'external' && externalEmail.trim()) {
+          const tag = `[Email: ${externalEmail.trim()}]`;
+          return notes ? `${notes}\n${tag}` : tag;
+        }
+        return notes || undefined;
+      })();
+
       const data: CreateReferralData = {
         referring_provider_id: providerId,
         patient_id: selectedPatient.id,
         referral_reason: reason,
         urgency,
-        notes: notes || undefined,
+        notes: combinedNotes,
       };
 
       if (referralType === 'internal') {
@@ -427,9 +713,25 @@ function CreateReferralModal({
         data.external_provider_address = externalAddress || undefined;
       }
 
-      await referralService.createReferral(data);
+      const created = await referralService.createReferral(data);
       toast.success('Referral created');
-      onCreated();
+
+      const referringProvider = {
+        name: userProfile
+          ? `Dr. ${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim()
+          : 'Referring Provider',
+        email: userProfile?.email || user?.email || '',
+        phone: (userProfile as any)?.phone || '',
+      };
+
+      onCreated({
+        referral: {
+          ...created,
+          external_provider_email: referralType === 'external' ? externalEmail.trim() || null : null,
+        },
+        patient: selectedPatient,
+        referringProvider,
+      });
     } catch (error: any) {
       toast.error(error.message || 'Failed to create referral');
     } finally {
@@ -611,6 +913,19 @@ function CreateReferralModal({
                     className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                   />
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={externalEmail}
+                  onChange={e => setExternalEmail(e.target.value)}
+                  placeholder="referrals@clinic.com"
+                  className="w-full px-3 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  If provided, you'll be able to email the referral letter directly from the next step.
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
