@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Clock, Eye, Building2, Search, MapPin, Shield, ChevronLeft, Mail, Phone } from 'lucide-react';
-import { supabase } from '../../../../../lib/supabase';
+import { api } from '../../../../../lib/api-client';
 
 type TabFilter = 'all' | 'pending' | 'approved' | 'rejected';
 
@@ -47,19 +47,37 @@ export default function ClinicApplicationsPage() {
   const loadClinics = async () => {
     setLoading(true);
     try {
-      let query = supabase
-        .from('clinics')
-        .select('*, user_profiles!clinics_owner_id_fkey(first_name, last_name, email)')
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false });
-
+      const params: Record<string, any> = {
+        order_by: 'created_at:desc',
+        limit: 500,
+      };
       if (activeTab !== 'all') {
-        query = query.eq('onboarding_status', activeTab);
+        params.onboarding_status = activeTab;
       }
 
-      const { data, error } = await query;
+      const { data, error } = await api.get<any[]>('/clinics', { params });
       if (error) throw error;
-      setClinics(data || []);
+
+      const clinicRows: any[] = Array.isArray(data) ? data : [];
+      const ownerIds = Array.from(
+        new Set(clinicRows.map(c => c.owner_id).filter(Boolean))
+      );
+      let ownersById = new Map<string, any>();
+      if (ownerIds.length > 0) {
+        const { data: owners } = await api.get<any[]>('/user-profiles', {
+          params: { id_in: ownerIds.join(','), limit: ownerIds.length },
+        });
+        if (Array.isArray(owners)) {
+          ownersById = new Map(owners.map((o: any) => [o.id, o]));
+        }
+      }
+
+      setClinics(
+        clinicRows.map(c => ({
+          ...c,
+          user_profiles: c.owner_id ? ownersById.get(c.owner_id) : undefined,
+        }))
+      );
     } catch (error) {
       console.error('Error loading clinic applications:', error);
     } finally {
@@ -71,16 +89,12 @@ export default function ClinicApplicationsPage() {
     if (!selected) return;
     setActionLoading(true);
     try {
-      const { error } = await supabase
-        .from('clinics')
-        .update({
-          onboarding_status: 'approved',
-          is_verified: true,
-          is_active: true,
-          verification_date: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', selected.id);
+      const { error } = await api.put(`/clinics/${selected.id}`, {
+        onboarding_status: 'approved',
+        is_verified: true,
+        is_active: true,
+        verification_date: new Date().toISOString(),
+      });
 
       if (error) throw error;
       setMessage('Clinic application approved successfully.');
@@ -98,14 +112,10 @@ export default function ClinicApplicationsPage() {
     if (!selected) return;
     setActionLoading(true);
     try {
-      const { error } = await supabase
-        .from('clinics')
-        .update({
-          onboarding_status: 'rejected',
-          is_active: false,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', selected.id);
+      const { error } = await api.put(`/clinics/${selected.id}`, {
+        onboarding_status: 'rejected',
+        is_active: false,
+      });
 
       if (error) throw error;
       setShowRejectModal(false);
