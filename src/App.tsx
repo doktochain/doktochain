@@ -85,6 +85,7 @@ const ProviderLoginPage = lazy(() => import('./app/auth/provider-login/page'));
 const BusinessPortalLoginPage = lazy(() => import('./app/auth/portal-login/page'));
 const AdminLoginPage = lazy(() => import('./app/auth/admin-login/page'));
 const RegisterPage = lazy(() => import('./app/auth/register/page'));
+const ProviderInvitationPage = lazy(() => import('./app/provider-invitation/page'));
 
 const PatientDashboard = lazy(() => import('./app/dashboard/patient/dashboard/page'));
 const PatientProfile = lazy(() => import('./app/dashboard/patient/my-profile/page'));
@@ -319,6 +320,7 @@ function App() {
                 <Route path="portal/login" element={<BusinessPortalLoginPage />} />
                 <Route path="platform-admin/login" element={<AdminLoginPage />} />
                 <Route path="register" element={<RegisterPage />} />
+                <Route path="provider-invitation" element={<ProviderInvitationPage />} />
 
                 <Route path="dashboard" element={<ProtectedRoute allowedRoles={['patient', 'provider', 'admin', 'pharmacy', 'clinic', 'staff']}><DashboardLayout><DashboardPage /></DashboardLayout></ProtectedRoute>} />
 
