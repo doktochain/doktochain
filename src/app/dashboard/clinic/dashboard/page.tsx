@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Users, CheckCircle, Clock, Settings, UserPlus, CalendarDays, Mail, Bell, TrendingUp, MapPin, Shield, Stethoscope, DollarSign, FileText, Activity, ClipboardList } from 'lucide-react';
+import { toast } from 'sonner';
+import { Building2, Users, CheckCircle, Clock, Settings, UserPlus, CalendarDays, Mail, Bell, TrendingUp, MapPin, Shield, Stethoscope, DollarSign, FileText, Activity, ClipboardList, Loader2 } from 'lucide-react';
 import CurrentPlanBanner from '../../../../components/subscription/CurrentPlanBanner';
 import { useAuth } from '../../../../contexts/AuthContext';
 import { clinicService, Clinic, ClinicAffiliation, ClinicNotification } from '../../../../services/clinicService';
@@ -19,6 +20,12 @@ export default function ClinicDashboardPage() {
   const [totalPatients, setTotalPatients] = useState(0);
   const [monthlyRevenue, setMonthlyRevenue] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [setupName, setSetupName] = useState('');
+  const [setupEmail, setSetupEmail] = useState('');
+  const [setupPhone, setSetupPhone] = useState('');
+  const [setupCity, setSetupCity] = useState('');
+  const [setupProvince, setSetupProvince] = useState('');
+  const [creatingClinic, setCreatingClinic] = useState(false);
 
   useEffect(() => {
     if (user?.id) loadData();
@@ -122,13 +129,126 @@ export default function ClinicDashboardPage() {
     );
   }
 
+  const handleCreateClinic = async () => {
+    if (!user?.id) return;
+    if (!setupName.trim()) {
+      toast.error('Please enter a clinic name');
+      return;
+    }
+    setCreatingClinic(true);
+    try {
+      const created = await clinicService.createClinic({
+        owner_id: user.id,
+        name: setupName.trim(),
+        email: setupEmail.trim() || userProfile?.email || undefined,
+        phone: setupPhone.trim() || userProfile?.phone || undefined,
+        city: setupCity.trim() || userProfile?.city || undefined,
+        province: setupProvince.trim() || userProfile?.province || undefined,
+        onboarding_status: 'pending' as any,
+        is_active: false,
+        is_verified: false,
+      });
+      toast.success('Clinic created. Our team will review your application.');
+      setClinic(created);
+      await loadData();
+    } catch (err: any) {
+      console.error('Failed to create clinic', err);
+      toast.error(err?.message || 'Failed to create clinic');
+    } finally {
+      setCreatingClinic(false);
+    }
+  };
+
   if (!clinic) {
     return (
       <div className="p-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center max-w-lg mx-auto">
-          <Building2 size={48} className="text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-gray-800 mb-2">No Clinic Assigned</h2>
-          <p className="text-gray-500">Your clinic profile hasn't been set up yet.</p>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 max-w-2xl mx-auto">
+          <div className="flex flex-col items-center text-center mb-6">
+            <div className="w-16 h-16 rounded-full bg-sky-50 flex items-center justify-center mb-4">
+              <Building2 size={32} className="text-sky-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Set up your clinic</h2>
+            <p className="text-gray-500 max-w-md">
+              Your clinic profile hasn't been created yet. Tell us a bit about your practice to get started — you can complete the rest later from your profile.
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Clinic name *</label>
+              <input
+                type="text"
+                value={setupName}
+                onChange={e => setSetupName(e.target.value)}
+                placeholder="e.g. Riverside Family Clinic"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-sm"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Clinic email</label>
+                <input
+                  type="email"
+                  value={setupEmail}
+                  onChange={e => setSetupEmail(e.target.value)}
+                  placeholder={userProfile?.email || 'clinic@example.com'}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={setupPhone}
+                  onChange={e => setSetupPhone(e.target.value)}
+                  placeholder={userProfile?.phone || '(555) 123-4567'}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-sm"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                <input
+                  type="text"
+                  value={setupCity}
+                  onChange={e => setSetupCity(e.target.value)}
+                  placeholder={userProfile?.city || 'Toronto'}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Province</label>
+                <input
+                  type="text"
+                  value={setupProvince}
+                  onChange={e => setSetupProvince(e.target.value)}
+                  placeholder={userProfile?.province || 'ON'}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={handleCreateClinic}
+                disabled={creatingClinic || !setupName.trim()}
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-lg font-medium text-sm disabled:opacity-50"
+              >
+                {creatingClinic ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Building2 className="w-4 h-4" />
+                    Create clinic
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
