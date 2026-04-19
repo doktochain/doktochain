@@ -47,6 +47,10 @@ export default function LoginFormFields({
   const navigate = useNavigate();
   const { t } = useTranslation('auth');
 
+  const returnTo = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('returnTo')
+    : null;
+
   const buttonColors = buttonColorMap[accentColor] || buttonColorMap.teal;
   const linkColors = linkColorMap[accentColor] || linkColorMap.teal;
 
@@ -91,7 +95,8 @@ export default function LoginFormFields({
         return;
       }
 
-      navigate(redirectPath, { replace: true });
+      const safeReturnTo = returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : null;
+      navigate(safeReturnTo || redirectPath, { replace: true });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Login failed';
       if (message.includes('Invalid login credentials')) {
