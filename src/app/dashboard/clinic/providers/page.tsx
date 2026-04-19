@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Users, CheckCircle, Clock, UserPlus, Mail, X, Send,
   MoreVertical, Phone, UserX, RefreshCw, Search, Filter,
-  Stethoscope, Shield, AlertCircle,
+  Stethoscope, Shield, AlertCircle, Copy, Link as LinkIcon,
 } from 'lucide-react';
 import { useAuth } from '../../../../contexts/AuthContext';
 import {
@@ -11,6 +11,7 @@ import {
   ClinicAffiliation,
   ClinicInvitation,
 } from '../../../../services/clinicService';
+import { api } from '../../../../lib/api-client';
 import { ConfirmDialog } from '../../../../components/ui/confirm-dialog';
 
 type TabType = 'active' | 'pending' | 'invitations';
@@ -562,6 +563,9 @@ function InviteProviderModal({ clinic, userId, onClose, onSuccess }: {
   });
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const [createdInvitation, setCreatedInvitation] = useState<ClinicInvitation | null>(null);
+  const [platformProviderEmail, setPlatformProviderEmail] = useState<boolean | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const roleOptions = [
     { value: 'attending_physician', label: 'Attending Physician' },
@@ -572,6 +576,36 @@ function InviteProviderModal({ clinic, userId, onClose, onSuccess }: {
     { value: 'surgeon', label: 'Surgeon' },
     { value: 'nurse_practitioner', label: 'Nurse Practitioner' },
   ];
+
+  const inviteLink = createdInvitation
+    ? `${window.location.origin}/en/provider-invitation?token=${createdInvitation.token}`
+    : '';
+
+  const copyLink = async () => {
+    if (!inviteLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
+
+  const checkPlatformProvider = async (email: string) => {
+    const normalized = email.toLowerCase().trim();
+    if (!normalized || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+      setPlatformProviderEmail(null);
+      return;
+    }
+    try {
+      const { data } = await api.get<any[]>('/user-profiles', {
+        params: { email: normalized, role: 'provider', limit: 1 },
+      });
+      const hit = Array.isArray(data) ? data[0] : null;
+      setPlatformProviderEmail(!!hit);
+    } catch {
+      setPlatformProviderEmail(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -605,6 +639,7 @@ function InviteProviderModal({ clinic, userId, onClose, onSuccess }: {
         await clinicService.sendInvitationEmail(invitation.id);
       } catch {}
 
+      setCreatedInvitation(invitation);
       onSuccess();
     } catch (err: any) {
       if (err.message?.includes('unique') || err.code === '23505') {
@@ -620,6 +655,72 @@ function InviteProviderModal({ clinic, userId, onClose, onSuccess }: {
   const updateField = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  if (createdInvitation) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                <CheckCircle size={20} className="text-green-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-800">Invitation created</h2>
+                <p className="text-sm text-gray-500 mt-0.5">
+                  {createdInvitation.first_name} {createdInvitation.last_name} &middot; {createdInvitation.email}
+                </p>
+              </div>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+              <X size={20} className="text-gray-400" />
+            </button>
+          </div>
+          <div className="p-6 space-y-4">
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-900">
+                We&apos;ve emailed the invitation to <strong>{createdInvitation.email}</strong>.
+                If it doesn&apos;t arrive, copy the link below and share it directly.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+                <LinkIcon size={14} />
+                Invitation link
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={inviteLink}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-xs font-mono bg-gray-50 truncate"
+                />
+                <button
+                  type="button"
+                  onClick={copyLink}
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Copy size={14} />
+                  {copied ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">Valid for 30 days. Anyone with this link can accept the invitation after signing in as {createdInvitation.email}.</p>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={onClose}
+                className="px-5 py-2.5 text-sm font-medium text-white bg-gray-800 rounded-lg hover:bg-gray-900 transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -678,11 +779,27 @@ function InviteProviderModal({ clinic, userId, onClose, onSuccess }: {
             <input
               type="email"
               value={formData.email}
-              onChange={e => updateField('email', e.target.value)}
+              onChange={e => {
+                updateField('email', e.target.value);
+                setPlatformProviderEmail(null);
+              }}
+              onBlur={e => checkPlatformProvider(e.target.value)}
               className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               placeholder="doctor@example.com"
               required
             />
+            {platformProviderEmail === true && (
+              <p className="flex items-center gap-1.5 text-xs text-green-700 mt-1">
+                <CheckCircle size={12} />
+                This email belongs to an existing provider on Doktochain. They&apos;ll see the invitation when they sign in.
+              </p>
+            )}
+            {platformProviderEmail === false && (
+              <p className="flex items-center gap-1.5 text-xs text-amber-700 mt-1">
+                <AlertCircle size={12} />
+                No Doktochain account found with this email. They&apos;ll be asked to create a provider account via the invitation link.
+              </p>
+            )}
           </div>
 
           <div>
