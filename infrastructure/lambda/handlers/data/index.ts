@@ -107,7 +107,12 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
     'subscription_plans', 'cms_pages', 'cms_blogs', 'cms_testimonials',
     'cms_faqs', 'cms_faq_categories', 'cms_blog_categories', 'cms_blog_tags',
     'cms_locations_content', 'specialties_master', 'medical_services',
+    'clinic_provider_invitations',
   ]);
+
+  const PUBLIC_REQUIRED_PARAMS: Record<string, string> = {
+    clinic_provider_invitations: 'token',
+  };
 
   try {
     const pathMatch = path.match(/^\/(?:public-)?data\/([a-z0-9-]+)(?:\/([a-z0-9-]+))?$/);
@@ -130,6 +135,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     if (isPublicPath && method !== 'GET') {
       return error('Public endpoint only supports GET', 405, origin);
+    }
+
+    if (isPublicPath && PUBLIC_REQUIRED_PARAMS[table]) {
+      const required = PUBLIC_REQUIRED_PARAMS[table];
+      const qs = event.queryStringParameters || {};
+      if (!qs[required]) {
+        return badRequest(`Query param '${required}' is required for this table`, origin);
+      }
     }
 
     const user = extractUser(event);
@@ -229,6 +242,27 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           }
 
           const result = await client.query(query, params);
+
+          if (isPublicPath && table === 'clinic_provider_invitations' && result.rows.length > 0) {
+            const clinicIds = Array.from(
+              new Set(result.rows.map((r: any) => r.clinic_id).filter(Boolean))
+            );
+            if (clinicIds.length > 0) {
+              const clinicRes = await client.query(
+                `SELECT id, name, logo_url FROM clinics WHERE id = ANY($1::uuid[])`,
+                [clinicIds]
+              );
+              const clinicMap = new Map<string, { name: string; logo_url: string | null }>(
+                clinicRes.rows.map((c: any) => [c.id as string, { name: c.name, logo_url: c.logo_url }])
+              );
+              for (const row of result.rows as any[]) {
+                const clinic = clinicMap.get(row.clinic_id);
+                row.clinic_name = clinic?.name || null;
+                row.clinic_logo_url = clinic?.logo_url || null;
+              }
+            }
+          }
+
           return result.rows;
         }
 
