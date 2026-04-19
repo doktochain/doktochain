@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Building2, CheckCircle, CreditCard as Edit, Trash2, Eye, Shield } from 'lucide-react';
+import { Building2, CheckCircle, CreditCard as Edit, Trash2, Eye, Shield, AlertCircle, UserPlus, X } from 'lucide-react';
+import { toast } from 'sonner';
 import AdminCRUDTemplate from '../../../../../components/admin/AdminCRUDTemplate';
 import AdminFormModal, { FormField } from '../../../../../components/admin/AdminFormModal';
 import AdminDeleteConfirmation from '../../../../../components/admin/AdminDeleteConfirmation';
@@ -8,7 +9,9 @@ import AdminStatusBadge from '../../../../../components/admin/AdminStatusBadge';
 import { TableColumn, TableAction } from '../../../../../components/admin/AdminDataTable';
 import { BulkAction } from '../../../../../components/admin/AdminBulkActions';
 import { clinicService, Clinic } from '../../../../../services/clinicService';
-import { supabase } from '../../../../../lib/supabase';
+import { api } from '../../../../../lib/api-client';
+
+type ClinicUser = { id: string; first_name: string; last_name: string; email: string };
 
 const PROVINCES = [
   { value: 'ON', label: 'Ontario' },
@@ -47,11 +50,18 @@ export default function AdminClinicsPage() {
   const [showDetailView, setShowDetailView] = useState(false);
   const [selectedClinic, setSelectedClinic] = useState<Clinic | null>(null);
   const [clinicOwners, setClinicOwners] = useState<{ value: string; label: string }[]>([]);
+  const [unassignedUsers, setUnassignedUsers] = useState<ClinicUser[]>([]);
+  const [assignTarget, setAssignTarget] = useState<ClinicUser | null>(null);
+  const [assignName, setAssignName] = useState('');
+  const [assigning, setAssigning] = useState(false);
 
   useEffect(() => {
-    loadClinics();
-    loadClinicOwners();
+    refreshAll();
   }, []);
+
+  const refreshAll = async () => {
+    await Promise.all([loadClinics(), loadClinicOwners()]);
+  };
 
   const loadClinics = async () => {
     setLoading(true);
@@ -67,18 +77,59 @@ export default function AdminClinicsPage() {
 
   const loadClinicOwners = async () => {
     try {
-      const { data } = await supabase
-        .from('user_profiles')
-        .select('id, first_name, last_name, email')
-        .eq('role', 'clinic');
+      const { data: users } = await api.get<ClinicUser[]>('/user-profiles', {
+        params: { role: 'clinic', limit: 500 },
+      });
+      const { data: existingClinics } = await api.get<any[]>('/clinics', {
+        params: { deleted_at: 'null', limit: 500 },
+      });
+      const owners = Array.isArray(users) ? users : [];
+      const assigned = new Set(
+        (Array.isArray(existingClinics) ? existingClinics : [])
+          .map((c: any) => c.owner_id)
+          .filter(Boolean)
+      );
       setClinicOwners(
-        (data || []).map((u: any) => ({
+        owners.map(u => ({
           value: u.id,
-          label: `${u.first_name} ${u.last_name} (${u.email})`,
+          label: `${u.first_name || ''} ${u.last_name || ''} (${u.email})`.trim(),
         }))
       );
-    } catch {
+      setUnassignedUsers(owners.filter(u => !assigned.has(u.id)));
+    } catch (err) {
+      console.warn('Failed to load clinic owners', err);
       setClinicOwners([]);
+      setUnassignedUsers([]);
+    }
+  };
+
+  const openAssignModal = (user: ClinicUser) => {
+    setAssignTarget(user);
+    setAssignName(`${user.first_name || ''} ${user.last_name || ''}`.trim() + ' Clinic');
+  };
+
+  const handleAssignCreate = async () => {
+    if (!assignTarget) return;
+    if (!assignName.trim()) { toast.error('Enter a clinic name'); return; }
+    setAssigning(true);
+    try {
+      await clinicService.createClinic({
+        owner_id: assignTarget.id,
+        name: assignName.trim(),
+        email: assignTarget.email,
+        onboarding_status: 'pending' as any,
+        is_active: false,
+        is_verified: false,
+      });
+      toast.success(`Clinic created for ${assignTarget.first_name} ${assignTarget.last_name}`);
+      setAssignTarget(null);
+      setAssignName('');
+      await refreshAll();
+    } catch (err: any) {
+      console.error('Failed to create clinic for user', err);
+      toast.error(err?.message || 'Failed to create clinic');
+    } finally {
+      setAssigning(false);
     }
   };
 
@@ -236,6 +287,35 @@ export default function AdminClinicsPage() {
 
   return (
     <>
+      {unassignedUsers.length > 0 && (
+        <div className="mb-4 border border-amber-200 bg-amber-50 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-amber-900">
+                {unassignedUsers.length} clinic-role {unassignedUsers.length === 1 ? 'user has' : 'users have'} no clinic record yet
+              </h3>
+              <p className="text-sm text-amber-800 mt-1">
+                These users signed up with the <strong>clinic</strong> role but a clinic profile was never created for them. They currently see an onboarding prompt in the portal. Create a clinic profile for them here or let them self-onboard.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {unassignedUsers.map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => openAssignModal(u)}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-amber-100 border border-amber-300 rounded-lg text-sm font-medium text-amber-900"
+                  >
+                    <UserPlus className="w-3.5 h-3.5" />
+                    {u.first_name || u.email} {u.last_name || ''}
+                    <span className="text-xs text-amber-700/80">· {u.email}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <AdminCRUDTemplate
         title="Clinic Management"
         description="Manage clinic tenants, verify applications, and monitor operations"
@@ -243,7 +323,7 @@ export default function AdminClinicsPage() {
         data={clinics}
         columns={columns}
         loading={loading}
-        onRefresh={loadClinics}
+        onRefresh={refreshAll}
         onCreate={() => setShowCreateModal(true)}
         onRowClick={(row: any) => { setSelectedClinic(row); setShowDetailView(true); }}
         actions={actions}
@@ -252,6 +332,53 @@ export default function AdminClinicsPage() {
         createButtonLabel="Add Clinic"
         emptyMessage="No clinics found"
       />
+
+      {assignTarget && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-xl">
+            <div className="p-5 border-b border-gray-200 flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Create clinic profile</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  For <strong>{assignTarget.first_name} {assignTarget.last_name}</strong> · {assignTarget.email}
+                </p>
+              </div>
+              <button onClick={() => setAssignTarget(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Clinic name *</label>
+                <input
+                  type="text"
+                  value={assignName}
+                  onChange={e => setAssignName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-transparent text-sm"
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                The clinic will be created in <strong>pending</strong> onboarding status. The owner can complete the rest from their portal.
+              </p>
+            </div>
+            <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+              <button
+                onClick={() => setAssignTarget(null)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg text-sm font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAssignCreate}
+                disabled={assigning || !assignName.trim()}
+                className="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+              >
+                {assigning ? 'Creating...' : 'Create clinic'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <AdminFormModal
         isOpen={showCreateModal}
