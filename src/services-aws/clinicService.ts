@@ -457,15 +457,16 @@ export const clinicService = {
   },
 
   async acceptInvitation(token: string, providerId: string): Promise<void> {
-    const { data: invitation, error: fetchError } = await api.get<any>('/clinic-provider-invitations', {
-      params: { token, status: 'pending', single: true },
+    const { data: publicInv, error: pubErr } = await api.get<any[]>('/public-data/clinic-provider-invitations', {
+      params: { token, limit: 1 },
     });
-
-    if (fetchError) throw fetchError;
-    if (!invitation) throw new Error('Invitation not found or already used');
+    if (pubErr) throw pubErr;
+    const invitation = Array.isArray(publicInv) ? publicInv[0] : null;
+    if (!invitation) throw new Error('Invitation not found');
+    if (invitation.status !== 'pending') throw new Error('Invitation is no longer pending');
     if (new Date(invitation.expires_at) < new Date()) throw new Error('Invitation has expired');
 
-    const clinicName = invitation.clinics?.name || '';
+    const clinicName = invitation.clinic_name || '';
 
     const { error: affError } = await api.post('/provider-clinic-affiliations', {
       provider_id: providerId,
@@ -490,22 +491,28 @@ export const clinicService = {
   },
 
   async declineInvitation(token: string): Promise<void> {
-    const { error } = await api.put('/clinic-provider-invitations', {
-      status: 'declined',
-      updated_at: new Date().toISOString(),
-      _filter: { token, status: 'pending' },
+    const { data: publicInv, error: pubErr } = await api.get<any[]>('/public-data/clinic-provider-invitations', {
+      params: { token, limit: 1 },
     });
+    if (pubErr) throw pubErr;
+    const invitation = Array.isArray(publicInv) ? publicInv[0] : null;
+    if (!invitation) throw new Error('Invitation not found');
+    if (invitation.status !== 'pending') return;
 
+    const { error } = await api.put(`/clinic-provider-invitations/${invitation.id}`, {
+      status: 'declined',
+    });
     if (error) throw error;
   },
 
   async getInvitationByToken(token: string): Promise<ClinicInvitation | null> {
-    const { data, error } = await api.get<ClinicInvitation>('/clinic-provider-invitations', {
-      params: { token, single: true },
+    const { data, error } = await api.get<ClinicInvitation[]>('/public-data/clinic-provider-invitations', {
+      params: { token, limit: 1 },
     });
 
     if (error) throw error;
-    return data;
+    const rows = Array.isArray(data) ? data : data ? [data as any] : [];
+    return rows[0] || null;
   },
 
   async sendInvitationEmail(invitationId: string): Promise<void> {
