@@ -67,7 +67,22 @@ export default function AdminClinicsPage() {
     setLoading(true);
     try {
       const data = await clinicService.getAllClinics();
-      setClinics(data);
+      const ownerIds = Array.from(new Set(data.map((c: any) => c.owner_id).filter(Boolean)));
+      let ownersById = new Map<string, any>();
+      if (ownerIds.length > 0) {
+        const { data: owners } = await api.get<any[]>('/user-profiles', {
+          params: { id_in: ownerIds.join(','), limit: ownerIds.length },
+        });
+        if (Array.isArray(owners)) {
+          ownersById = new Map(owners.map((o: any) => [o.id, o]));
+        }
+      }
+      setClinics(
+        data.map((c: any) => ({
+          ...c,
+          user_profiles: c.owner_id ? ownersById.get(c.owner_id) : undefined,
+        }))
+      );
     } catch (error) {
       console.error('Error loading clinics:', error);
     } finally {
@@ -81,11 +96,12 @@ export default function AdminClinicsPage() {
         params: { role: 'clinic', limit: 500 },
       });
       const { data: existingClinics } = await api.get<any[]>('/clinics', {
-        params: { deleted_at: 'null', limit: 500 },
+        params: { limit: 500 },
       });
       const owners = Array.isArray(users) ? users : [];
       const assigned = new Set(
         (Array.isArray(existingClinics) ? existingClinics : [])
+          .filter((c: any) => !c.deleted_at)
           .map((c: any) => c.owner_id)
           .filter(Boolean)
       );
