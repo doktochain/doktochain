@@ -156,11 +156,11 @@ export interface CreateInvitationData {
 export const clinicService = {
   async getAllClinics(): Promise<Clinic[]> {
     const { data, error } = await api.get<Clinic[]>('/clinics', {
-      params: { deleted_at: 'null', order: 'created_at.desc', include: 'owner' },
+      params: { order_by: 'created_at:desc', limit: 500 },
     });
 
     if (error) throw error;
-    return data || [];
+    return (data || []).filter((c: any) => !c.deleted_at);
   },
 
   async getClinicById(id: string): Promise<Clinic | null> {
@@ -171,12 +171,14 @@ export const clinicService = {
   },
 
   async getClinicByOwnerId(ownerId: string): Promise<Clinic | null> {
-    const { data, error } = await api.get<Clinic>('/clinics', {
-      params: { owner_id: ownerId, deleted_at: 'null', single: true },
+    const { data, error } = await api.get<Clinic[]>('/clinics', {
+      params: { owner_id: ownerId, limit: 5 },
     });
 
     if (error) throw error;
-    return data;
+    const rows = Array.isArray(data) ? data : data ? [data as unknown as Clinic] : [];
+    const active = rows.filter((c: any) => !c.deleted_at);
+    return active[0] || null;
   },
 
   async createClinic(clinicData: Partial<Clinic>): Promise<Clinic> {
